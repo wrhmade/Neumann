@@ -17,6 +17,7 @@ full:
 	$(MAKE) $(IMAGENAME)
 
 clean_full:
+	$(DEL) bootfd.img
 	$(MAKE) -C boot clean
 	$(MAKE) -C loader clean
 	$(MAKE) -C kernel clean
