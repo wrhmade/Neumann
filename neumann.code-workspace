@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"sysset.h": "c",
+			"stdint.h": "c",
+			"graphic.h": "c"
+		}
+	}
+}

@@ -1,0 +1,12 @@
+/*
+sysset.h
+系统设置
+Copyright W24 Studio 
+*/
+
+#ifndef SYSSET_H
+#define SYSSET_H
+
+#define DESKTOP_BACKCOLOR ARGB(255,57,109,165)
+//#define DESKTOP_BACKCOLOR ARGB(0xff,0,128,128)
+#endif
