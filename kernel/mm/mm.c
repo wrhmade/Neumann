@@ -168,7 +168,7 @@ uint32_t init_mem(void)
 	man->losts = 0;
 
 	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
-	memman_free(memman, 0x00400000, memtotal - 0x00400000);*/
+	memman_free(memman, 0x00400000, memtotal - 0x00400000);
 	
 	return memtotal;
 }
