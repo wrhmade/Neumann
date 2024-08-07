@@ -56,77 +56,82 @@ uint32_t free_space_total(void)
 	return t;
 }
 
-uint32_t memman_alloc(memman_t *man, uint32_t size)
-/* 内部使用分配空间*/
+static void memman_init(memman_t *man)
 {
-	uint32_t i, a;
-	for (i = 0; i < man->frees; i++) {
-		if (man->free[i].size >= size) {
-			a = man->free[i].addr;
-			man->free[i].addr += size;
-			man->free[i].size -= size;
-			if (man->free[i].size == 0) {
-				man->frees--;
-				for (; i < man->frees; i++) {
-					man->free[i] = man->free[i + 1];
-				}
-			}
-			return a;
-		}
-	}
-	return 0;
+    man->frees = 0;
 }
 
-int memman_free(memman_t *man, uint32_t addr, uint32_t size)
-/* 内部使用释放空间*/
+static uint32_t memman_alloc(memman_t *man, uint32_t size)
 {
-	uint32_t i, j;
-	for (i = 0; i < man->frees; i++) {
-		if (man->free[i].addr > addr) {
-			break;
-		}
-	}
-	if (i > 0) {
-		if (man->free[i - 1].addr + man->free[i - 1].size == addr) {
-			man->free[i - 1].size += size;
-			if (i < man->frees) {
-				if (addr + size == man->free[i].addr) {
-					man->free[i - 1].size += man->free[i].size;
-					man->frees--;
-					for (; i < man->frees; i++) {
-						man->free[i] = man->free[i + 1];
-					}
-				}
-			}
-			return 0;
-		}
-	}
-	if (i < man->frees) {
-		if (addr + size == man->free[i].addr) {
-			man->free[i].addr = addr;
-			man->free[i].size += size;
-			return 0;
-		}
-	}
-	if (man->frees < MEMMAN_FREES) {
-		for (j = man->frees; j > i; j--) {
-			man->free[j] = man->free[j - 1];
-		}
-		man->frees++;
-		if (man->maxfrees < man->frees) {
-			man->maxfrees = man->frees;
-		}
-		man->free[i].addr = addr;
-		man->free[i].size = size;
-		return 0;
-	}
-	man->losts++;
-	man->lostsize += size;
-	return -1;
+    uint32_t i, a;
+    for (i = 0; man->frees; i++) {
+        if (man->free[i].size >= size) { // 找到了足够的内存
+            a = man->free[i].addr;
+            man->free[i].addr += size; // addr后移，因为原来的addr被使用了
+            man->free[i].size -= size; // size也要减掉
+            if (man->free[i].size == 0) { // 这一条size被分配完了
+                man->frees--; // 减一条frees
+                for (; i < man->frees; i++) {
+                    man->free[i] = man->free[i + 1]; // 各free前移
+                }
+            }
+            return a; // 返回
+        }
+    }
+    return 0; // 无可用空间
 }
+
+static int memman_free(memman_t *man, uint32_t addr, uint32_t size)
+{
+    int i, j;
+    for (i = 0; i < man->frees; i++) {
+        // 各free按addr升序排列
+        if (man->free[i].addr > addr) break; // 找到位置了！
+        // 现在的这个位置是第一个在addr之后的位置，有man->free[i - 1].addr < addr < man->free[i].addr
+    }
+    if (i > 0) {
+        if (man->free[i - 1].addr + man->free[i - 1].size == addr) {
+            // 可以和前面的可用部分合并
+            man->free[i - 1].size += size; // 并入
+            if (i < man->frees) {
+                if (addr + size == man->free[i].addr) {
+                    // 可以与后面的可用部分合并
+                    man->free[i - 1].size += man->free[i].size;
+                    // man->free[i]删除不用
+                    man->frees--; // frees减1
+                    for (; i < man->frees; i++) {
+                        man->free[i] = man->free[i + 1]; // 前移
+                    }
+                }
+            }
+            return 0; // free完毕
+        }
+    }
+    // 不能与前面的合并
+    if (i < man->frees) {
+        if (addr + size == man->free[i].addr) {
+            // 可以与后面的可用部分合并
+            man->free[i].addr = addr;
+            man->free[i].size += size;
+            return 0; // 成功合并
+        }
+    }
+    // 两边都合并不了
+    if (man->frees < MEMMAN_FREES) {
+        // free[i]之后的后移，腾出空间
+        for (j = man->frees; j > i; j--) man->free[j] = man->free[j - 1];
+        man->frees++;
+        man->free[i].addr = addr;
+        man->free[i].size = size; // 更新当前地址和大小
+        return 0; // 成功合并
+    }
+    // 无free可用且无法合并
+    return -1; // 失败
+}
+
+
 
 void *malloc(uint32_t size)
-/*分配空间*/
 {
     uint32_t addr;
     memman_t *memman = (memman_t *) MEMMAN_ADDR;
@@ -141,7 +146,6 @@ void *malloc(uint32_t size)
 }
 
 void free(void *p)
-/*释放空间*/
 {
     char *q = (char *) p;
     int size = 0;
@@ -162,13 +166,9 @@ uint32_t init_mem(void)
 	uint32_t memtotal=memtotal=memtest(0x00400000, 0xbfffffff);
 
 	memman_t *man=(memman_t *)MEMMAN_ADDR;
-	man->frees = 0;
-	man->maxfrees = 0;
-	man->lostsize = 0;
-	man->losts = 0;
+	memman_init(man);
 
-	memman_free(man, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
-	memman_free(man, 0x00400000, memtotal - 0x00400000);
+	memman_free(man, 0x400000, memtotal - 0x400000);
 	
 	return memtotal;
 }
