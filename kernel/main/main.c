@@ -15,6 +15,7 @@ Copyright W24 Studio
 #include <keyboard.h>
 #include <fifo.h>
 #include <mm.h>
+#include <sheet.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -24,7 +25,7 @@ int process=0;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 5
+#define PROCESS_SUM 7
 
 void process_forward(void)
 {
@@ -41,6 +42,11 @@ void krnlc_main(void)
 	uint32_t memtotal;
 	process=0;
 	char s[40];
+	shtctl_t *shtctl;
+	sheet_t *sht_back;
+	uint32_t *buf_back;
+	sheet_t *sht_mouse;
+	uint32_t *buf_mouse;
 	
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
@@ -70,7 +76,18 @@ void krnlc_main(void)
 	putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
 
-	init_desktop();
+	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
+	process_forward();
+	sht_back  = sheet_alloc(shtctl);
+    buf_back  = (uint32_t*) malloc(sizeof(uint32_t)*binfo->scrnx * binfo->scrny);
+    sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny,-1);
+	
+
+	process_forward();
+
+	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
+
+	
 	
 	
 
@@ -101,30 +118,37 @@ void krnlc_main(void)
 		"........................"
 	};
 
-	static uint32_t mouse[24*24];
+	buf_mouse=(uint32_t *)malloc(sizeof(uint32_t)*24*24);
 
 	int x,y;
 
 	for (y = 0; y < 24; y++) {
 		for (x = 0; x < 24; x++) {
 			if (cursor[y][x] == '*') {
-				mouse[y * 24 + x] = 0x000000;
+				buf_mouse[y * 24 + x] = 0x000000;
 			}
 			if (cursor[y][x] == 'O') {
-				mouse[y * 24 + x] = 0xFFFFFF;
+				buf_mouse[y * 24 + x] = 0xFFFFFF;
 			}
 			if (cursor[y][x] == '.') {
-				mouse[y * 24 + x] = DESKTOP_BACKCOLOR;
+				buf_mouse[y * 24 + x] = DESKTOP_BACKCOLOR;
 			}
 		}
 	}
 
+	sht_mouse=sheet_alloc(shtctl);
+	sheet_setbuf(sht_mouse,buf_mouse,24,24,DESKTOP_BACKCOLOR);
 	
 	int32_t mouse_x,mouse_y;
 	mouse_x=binfo->scrnx/2;
 	mouse_y=binfo->scrny/2;
 
-	putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
+	sheet_slide(sht_back,  0,  0);
+	sheet_updown(sht_back,  0);
+	sheet_slide(sht_mouse,  mouse_x,  mouse_y);
+	sheet_updown(sht_mouse,  1);
+
+	//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
 	uint8_t mouse_data;
 
 
@@ -136,7 +160,7 @@ void krnlc_main(void)
 			mouse_data=fifo_get(&mouse_fifo);
 			if(mouse_decode(&mdec,mouse_data)!=0)
 			{
-				boxfill(binfo->vram,binfo->scrnx,mouse_x,mouse_y,mouse_x+23,mouse_y+23,DESKTOP_BACKCOLOR);
+				//boxfill(binfo->vram,binfo->scrnx,mouse_x,mouse_y,mouse_x+23,mouse_y+23,DESKTOP_BACKCOLOR);
 				mouse_x+=mdec.x;
 				mouse_y+=mdec.y;
 				if (mouse_x < 0) {
@@ -153,8 +177,8 @@ void krnlc_main(void)
 				{
 					mouse_y = binfo->scrny-24;
 				}
-				putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
-
+				//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
+				sheet_slide(sht_mouse,  mouse_x,  mouse_y);
 				sprintf(s, "[lcr %4d %4d]", mdec.x, mdec.y);
 				if ((mdec.btn & 0x01) != 0) {
 					s[1] = 'L';

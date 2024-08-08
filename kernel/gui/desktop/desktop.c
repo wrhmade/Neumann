@@ -10,12 +10,11 @@ Copyright W24 Studio
 #include <macro.h>
 #include <binfo.h>
 
-void init_desktop()
+void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize)
 {
-    struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-    boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,DESKTOP_BACKCOLOR);
+    boxfill(buf,xsize,0,0,xsize,ysize,DESKTOP_BACKCOLOR);
 
-    putstr_ascii(binfo->vram,binfo->scrnx,binfo->scrnx-24*8,binfo->scrny-77,ARGB(255,0,0,0),"Neumann Operating System");
-    putstr_ascii(binfo->vram,binfo->scrnx,binfo->scrnx-19*8,binfo->scrny-61,ARGB(255,0,0,0),"Version 0.8[Beta 6]");
-    putstr_ascii(binfo->vram,binfo->scrnx,binfo->scrnx-52*8,binfo->scrny-45,ARGB(255,0,0,0),"WARNING:THIS IS A BETA VERSION THAT MAY BE UNSTABLE.");
+    putstr_ascii(buf,xsize,xsize-24*8,ysize-77,ARGB(255,0,0,0),"Neumann Operating System");
+    putstr_ascii(buf,xsize,xsize-19*8,ysize-61,ARGB(255,0,0,0),"Version 0.8[Beta 6]");
+    putstr_ascii(buf,xsize,xsize-52*8,ysize-45,ARGB(255,0,0,0),"WARNING:THIS IS A BETA VERSION THAT MAY BE UNSTABLE.");
 }

@@ -6,5 +6,6 @@ Copyright W24 Studio
 
 #ifndef DESKTOP_H
 #define DESKTOP_H
-void init_desktop(void);
+#include <stdint.h>
+void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize);
 #endif

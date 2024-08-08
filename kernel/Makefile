@@ -3,7 +3,7 @@ include ../config.txt
 
 OBJS=asmhead/asmhead.obj main/main.obj asm/nasmfunc.obj gui/graphic/graphic.obj gui/desktop/desktop.obj font/font.obj gdtidt/gdtidt.obj gdtidt/gdtasm.obj \
 	int/int.obj int/intasm.obj lib/string/string.obj lib/sprintf/sprintf.obj drivers/io/io.obj drivers/mouse/mouse.obj drivers/keyboard/keyboard.obj fifo/fifo.obj \
-	drivers/keyboard/keymap.obj mm/mm.obj mm/mmasm.obj regctl/regctl.obj
+	drivers/keyboard/keymap.obj mm/mm.obj mm/mmasm.obj regctl/regctl.obj gui/sheet/sheet.obj
 
 default:
 	$(MAKE) -C asmhead
