@@ -16,11 +16,13 @@ Copyright W24 Studio
 #include <fifo.h>
 #include <mm.h>
 #include <sheet.h>
+#include <window.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
 mdec_t mdec;
 
+sheet_t *global_shtctl;
 int process=0;
 
 #define PROCESS_COLOR 0xFF0000
@@ -77,6 +79,7 @@ void krnlc_main(void)
 
 
 	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
+	global_shtctl=shtctl;
 	process_forward();
 	sht_back  = sheet_alloc(shtctl);
     buf_back  = (uint32_t*) malloc(sizeof(uint32_t)*binfo->scrnx * binfo->scrny);
@@ -152,6 +155,14 @@ void krnlc_main(void)
 	uint8_t mouse_data;
 
 
+	window_t *window=create_window("The First Window",200,200,-1);
+	show_window(window);
+	move_window(window,binfo->scrnx/2,binfo->scrny/2);
+	window_t *window2=create_window("The Second Window",400,200,-1);
+	show_window(window2);
+	move_window(window2,50,50);
+
+	
 	for(;;)
 	{
 
@@ -169,13 +180,13 @@ void krnlc_main(void)
 				if (mouse_y < 0) {
 					mouse_y = 0;
 				}
-				if (mouse_x > binfo->scrnx-24)
+				if (mouse_x > binfo->scrnx-1)
 				{
-					mouse_x = binfo->scrnx-24;
+					mouse_x = binfo->scrnx-1;
 				}
-				if (mouse_y > binfo->scrny-24)
+				if (mouse_y > binfo->scrny-1)
 				{
-					mouse_y = binfo->scrny-24;
+					mouse_y = binfo->scrny-1;
 				}
 				//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
 				sheet_slide(sht_mouse,  mouse_x,  mouse_y);

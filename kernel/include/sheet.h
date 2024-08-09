@@ -44,4 +44,5 @@ void sheet_refresh(sheet_t *sht, int bx0, int by0, int bx1, int by1);
 void sheet_slide(sheet_t *sht, int vx0, int vy0);
 void sheet_free(sheet_t *sht);
 
+void putstr_ascii_sheet(sheet_t *sht, int x, int y, uint32_t c, uint32_t b, char *s);
 #endif

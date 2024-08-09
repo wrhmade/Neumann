@@ -8,6 +8,16 @@ Copyright W24 Studio
 #include <stdint.h>
 #include <stddef.h>
 #include <mm.h>
+#include <graphic.h>
+#include <string.h>
+
+void putstr_ascii_sheet(sheet_t *sht, int x, int y, uint32_t c, uint32_t b, char *s)
+{
+    int l=strlen(s);
+    boxfill(sht->buf, sht->bxsize, x, y, x + l * 8 - 1, y + 15, b);
+    putstr_ascii(sht->buf, sht->bxsize, x, y, c, s);
+    sheet_refresh(sht, x - 8, y, x + l * 8, y + 16);
+}
 
 // 初始化图层控制结构体函数
 shtctl_t *shtctl_init(unsigned int *vram, int xs, int ys)
