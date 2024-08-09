@@ -162,7 +162,7 @@ void krnlc_main(void)
 	show_window(window2);
 	move_window(window2,50,50);
 
-	
+	int _free,free;
 	for(;;)
 	{
 
@@ -211,6 +211,13 @@ void krnlc_main(void)
 			putstr_ascii(binfo->vram,binfo->scrnx,0,16,0xFF0000,s);
 		}
 		
-
+		_free=free_space_total();
+		if(_free!=free)
+		{
+			free=_free;
+			sprintf(s,"Free Space:%9dKB",free/1024);
+			boxfill(binfo->vram,binfo->scrnx,0,32,22*8,32+15,0xFFFFFF);
+			putstr_ascii(binfo->vram,binfo->scrnx,0,32,0xFF0000,s);
+		}
 	}
 }
