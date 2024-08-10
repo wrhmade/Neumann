@@ -12,6 +12,7 @@ Copyright W24 Studio
 #define MAX_SHEETS 65536
 #define SHEET_USE 1
 #include <stdint.h>
+#include <window.h>
 typedef struct SHTCTL shtctl_t;
 
 //图层信息结构体
@@ -24,6 +25,7 @@ typedef struct SHEET
     int height;         // 表示该图层在第几层(图层层号)
     int flags;          // 存放图层的设定值
     shtctl_t *ctl;
+    window_t *window; //对应的窗口
 }sheet_t;
 
 //图层控制结构体

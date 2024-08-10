@@ -32,14 +32,14 @@ uint16_t LCD_AlphaBlend(uint32_t foreground_color,uint32_t background_color,uint
 
 void boxfill(uint32_t *vram,uint16_t xsize,uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2,uint32_t c)
 {
-    int i,j;
-    for(i=y1;i<=y2;i++)
-    {
-        for(j=x1;j<=x2;j++)
-        {
-            vram[i*xsize+j]=c;
-        }
-    }
+    int x,y;
+	for(y = y1; y <= y2; y++)
+	{
+		for(x = x1; x <= x2; x++)
+		{
+			vram[y*xsize+x]=c;
+		}
+	}
 }
 
 void putfont(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, char *font)

@@ -41,6 +41,8 @@ void krnlc_main(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	int i,j;
+	int mouse_x,mouse_y,mmx=-1,mmy=-1,mmx2=0,x,y;
+	int new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0;
 	uint32_t memtotal;
 	process=0;
 	char s[40];
@@ -49,6 +51,7 @@ void krnlc_main(void)
 	uint32_t *buf_back;
 	sheet_t *sht_mouse;
 	uint32_t *buf_mouse;
+	sheet_t *sht;
 	
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
@@ -94,55 +97,16 @@ void krnlc_main(void)
 	
 	
 
-	static char cursor[24][24] = {
-		"O.......................", 
-		"OO......................", 
-		"O*O.....................", 
-		"O**O....................", 
-		"O***O...................", 
-		"O****O..................", 
-		"O*****O.................", 
-		"O******O................", 
-		"O*******O...............", 
-		"O********O..............", 
-		"O*********O.............", 
-		"O******OOOOO............", 
-		"O***O**O................", 
-		"O**OO**O................", 
-		"O*O..O**O...............", 
-		"OO...O**O...............", 
-		"O.....O**O..............", 
-		"......O**O..............", 
-		".......O**O.............", 
-		".......O**O.............", 
-		"........OO..............", 
-		"........................", 
-		"........................", 
-		"........................"
-	};
+	
 
 	buf_mouse=(uint32_t *)malloc(sizeof(uint32_t)*24*24);
-
-	int x,y;
-
-	for (y = 0; y < 24; y++) {
-		for (x = 0; x < 24; x++) {
-			if (cursor[y][x] == '*') {
-				buf_mouse[y * 24 + x] = 0x000000;
-			}
-			if (cursor[y][x] == 'O') {
-				buf_mouse[y * 24 + x] = 0xFFFFFF;
-			}
-			if (cursor[y][x] == '.') {
-				buf_mouse[y * 24 + x] = DESKTOP_BACKCOLOR;
-			}
-		}
-	}
+	draw_mouse(buf_mouse);
+	
 
 	sht_mouse=sheet_alloc(shtctl);
 	sheet_setbuf(sht_mouse,buf_mouse,24,24,DESKTOP_BACKCOLOR);
 	
-	int32_t mouse_x,mouse_y;
+	
 	mouse_x=binfo->scrnx/2;
 	mouse_y=binfo->scrny/2;
 
@@ -152,7 +116,7 @@ void krnlc_main(void)
 	sheet_updown(sht_mouse,  1);
 
 	//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
-	uint8_t mouse_data;
+	uint8_t mouse_data,keyboard_data;
 
 
 	window_t *window=create_window("The First Window",200,200,-1);
@@ -188,6 +152,8 @@ void krnlc_main(void)
 				{
 					mouse_y = binfo->scrny-1;
 				}
+				new_mx=mouse_x;
+				new_my=mouse_y;
 				//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
 				sheet_slide(sht_mouse,  mouse_x,  mouse_y);
 				sprintf(s, "[lcr %4d %4d]", mdec.x, mdec.y);
@@ -202,22 +168,84 @@ void krnlc_main(void)
 				}
 				boxfill(binfo->vram,binfo->scrnx,0,0,15*8,15,0xFFFFFF);
 				putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFF0000,s);
+				if((mdec.btn & 0x01)!=0)
+				{
+					if(mmx<0)
+					{
+						for(i=shtctl->top-1;i>0;i--)
+						{
+							sht = shtctl->sheets[i];
+							x=mouse_x-sht->vx0;
+							y=mouse_y-sht->vy0;
+							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+							{
+								sheet_updown(sht,shtctl->top-1);
+								if (0 <= x && x < sht->bxsize && 0 <= y && y < 18) {
+    		                        mmx = mouse_x;
+    		                        mmy = mouse_y;
+    		                        mmx2 = sht->vx0;
+    		                        new_wy = sht->vy0;
+    		                    }
+								if(sht->bxsize-17 <= x && x<= sht->bxsize-1 && 1<=y && y<=17)
+								{
+									close_window(sht->window);
+								}
+								break;
+							}
+						}
+					}
+					else
+					{
+						x = mouse_x - mmx;
+    		            y = mouse_y - mmy;
+    		            new_wx = (mmx2 + x + 2) & ~3;
+    		            new_wy = new_wy + y;
+    		            mmy = mouse_y;
+					}
+				}
+				else
+				{
+					mmx = -1; /* 记录鼠标没有按下左键 */
+    		        /* 将窗口移动到鼠标移动位置处,并标识窗口已移动过一次 */
+    		        if (new_wx != 0x7fffffff) {
+    		            move_window(sht->window, new_wx, new_wy);
+    		            new_wx = 0x7fffffff;
+    		        }
+				}
 			}
 		}
 		if(fifo_status(&decoded_key)>0)
 		{
- 			sprintf(s,"Keyboard Data:%c",fifo_get(&decoded_key));
+			keyboard_data=fifo_get(&decoded_key);
+ 			sprintf(s,"Keyboard Data:%c",keyboard_data);
 			boxfill(binfo->vram,binfo->scrnx,0,16,15*8,16+15,0xFFFFFF);
 			putstr_ascii(binfo->vram,binfo->scrnx,0,16,0xFF0000,s);
+			if(keyboard_data=='w')
+			{
+				window=create_window("Hello",100,50,-1);
+				show_window(window);
+				move_window(window,binfo->scrnx/2-50,binfo->scrny/2-25);
+			}
 		}
 		
-		_free=free_space_total();
-		if(_free!=free)
+		// _free=free_space_total();
+		// if(_free!=free)
+		// {
+		// 	free=_free;
+		// 	sprintf(s,"Free Space:%9dKB",free/1024);
+		// 	boxfill(binfo->vram,binfo->scrnx,0,32,22*8,32+15,0xFFFFFF);
+		// 	putstr_ascii(binfo->vram,binfo->scrnx,0,32,0xFF0000,s);
+		// }
+
+		if(fifo_status(&decoded_key)==0 && fifo_status(&mouse_fifo)==0)
 		{
-			free=_free;
-			sprintf(s,"Free Space:%9dKB",free/1024);
-			boxfill(binfo->vram,binfo->scrnx,0,32,22*8,32+15,0xFFFFFF);
-			putstr_ascii(binfo->vram,binfo->scrnx,0,32,0xFF0000,s);
+			if (new_mx >= 0) {
+                sheet_slide(sht_mouse, new_mx, new_my);
+                new_mx = -1;
+            } else if (new_wx != 0x7fffffff) {
+                sheet_slide(sht, new_wx, new_wy);
+                new_wx = 0x7fffffff;
+            }
 		}
 	}
 }

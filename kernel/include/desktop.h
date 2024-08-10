@@ -8,4 +8,5 @@ Copyright W24 Studio
 #define DESKTOP_H
 #include <stdint.h>
 void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize);
+void draw_mouse(uint32_t *buf_mouse);
 #endif
