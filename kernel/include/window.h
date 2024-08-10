@@ -7,7 +7,7 @@ Copyright W24 Studio
 #ifndef WINDOW_H
 #define WINDOW_H
 #include <stdint.h>
-#include <sheet.h>
+typedef struct SHEET sheet_t;;
 typedef struct WINDOW
 {
     sheet_t *sheet;
@@ -21,4 +21,5 @@ void draw_window(window_t *window);
 void show_window(window_t *window);
 void hide_window(window_t *window);
 void move_window(window_t *window,int x,int y);
+void close_window(window_t *window);
 #endif
