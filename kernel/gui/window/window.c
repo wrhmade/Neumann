@@ -35,6 +35,7 @@ void window_init(window_t *window,sheet_t *sheet,uint32_t xsize,uint32_t ysize,c
 {
     window->sheet=sheet;
     sheet->window=window;
+    sheet->window=window;
     window->xsize=xsize;
     window->ysize=ysize;
     strcpy(window->title,title);
@@ -65,6 +66,16 @@ void draw_window(window_t *window)
         "....***..***....",
         "...***....***...",
         "..***......***..",
+        "..***......***..",
+        "...***....***...",
+        "....***..***....",
+        ".....******.....",
+        "......****......",
+        "......****......",
+        ".....******.....",
+        "....***..***....",
+        "...***....***...",
+        "..***......***..",
         "................",
         "................",
         "................"
@@ -76,11 +87,14 @@ void draw_window(window_t *window)
         for(j=0;j<16;j++)
         {
             if(btn_close_chr[i][j]=='*')
+            if(btn_close_chr[i][j]=='*')
             {
+                btn_close[i*16+j]=WINDOW_CLOSE_BUTTON_COLOR;
                 btn_close[i*16+j]=WINDOW_CLOSE_BUTTON_COLOR;
             }
             if(btn_close_chr[i][j]=='.')
             {
+                btn_close[i*16+j]=WINDOW_CLOSE_BUTTON_BACKCOLOR;
                 btn_close[i*16+j]=WINDOW_CLOSE_BUTTON_BACKCOLOR;
             }
         }

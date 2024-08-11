@@ -98,13 +98,17 @@ void krnlc_main(void)
 	
 
 	
+	
 
 	buf_mouse=(uint32_t *)malloc(sizeof(uint32_t)*24*24);
+	draw_mouse(buf_mouse);
+	
 	draw_mouse(buf_mouse);
 	
 
 	sht_mouse=sheet_alloc(shtctl);
 	sheet_setbuf(sht_mouse,buf_mouse,24,24,DESKTOP_BACKCOLOR);
+	
 	
 	
 	mouse_x=binfo->scrnx/2;
