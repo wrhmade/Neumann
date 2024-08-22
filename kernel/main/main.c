@@ -17,6 +17,9 @@ Copyright W24 Studio
 #include <mm.h>
 #include <sheet.h>
 #include <window.h>
+#include <timer.h>
+#include <task.h>
+#include <stddef.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -27,7 +30,18 @@ int process=0;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 7
+#define PROCESS_SUM 9
+
+task_t *create_kernel_task(void *entry)
+{
+    task_t *new_task;
+    new_task = task_alloc();
+    new_task->tss.esp = (uint32_t) malloc(64 * 1024) + 64 * 1024 - 4;
+    new_task->tss.eip = (int) entry;
+    new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
+    new_task->tss.cs = 1 * 8;
+    return new_task;
+}
 
 void process_forward(void)
 {
@@ -36,6 +50,21 @@ void process_forward(void)
 	boxfill(binfo->vram,binfo->scrnx,_process,binfo->scrny/2-240/2+200,_process+(200/PROCESS_SUM),binfo->scrny/2-240/2+220,PROCESS_COLOR);
 	process+=200/PROCESS_SUM;
 }
+
+void taskb_main(void)
+{
+	task_t *task=task_now();
+	char s[10];
+	int tick=0;
+    
+	for(;;)
+	{
+		sprintf(s,"%09u",tick);
+		putstr_ascii_sheet(task->window->sheet,0,18,0x000000,0xFFFFFF,s);
+		tick++;
+	}
+}
+
 
 void krnlc_main(void)
 {
@@ -52,6 +81,7 @@ void krnlc_main(void)
 	sheet_t *sht_mouse;
 	uint32_t *buf_mouse;
 	sheet_t *sht;
+	
 	
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
@@ -75,7 +105,6 @@ void krnlc_main(void)
 
 	init_ps2mouse();process_forward();
 
-
 	memtotal=init_mem();process_forward();
 	sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
 	putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
@@ -91,6 +120,14 @@ void krnlc_main(void)
 
 	process_forward();
 
+	task_t *task_a=task_init();
+	process_forward();
+
+	init_timer(100);
+	process_forward();
+
+	
+
 	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
 
 	
@@ -101,8 +138,6 @@ void krnlc_main(void)
 	
 
 	buf_mouse=(uint32_t *)malloc(sizeof(uint32_t)*24*24);
-	draw_mouse(buf_mouse);
-	
 	draw_mouse(buf_mouse);
 	
 
@@ -129,6 +164,9 @@ void krnlc_main(void)
 	window_t *window2=create_window("The Second Window",400,200,-1);
 	show_window(window2);
 	move_window(window2,50,50);
+
+	
+	
 
 	int _free,free;
 	for(;;)
@@ -212,6 +250,10 @@ void krnlc_main(void)
 				window=create_window("Hello",100,50,-1);
 				show_window(window);
 				move_window(window,binfo->scrnx/2-50,binfo->scrny/2-25);
+				task_t *task_b=create_kernel_task(taskb_main);
+				window_settask(window,task_b);
+				task_run(task_b);
+
 			}
 		}
 		

@@ -3,7 +3,7 @@
 ;Copyright W24 Studio 
 
 [BITS 32]
-global load_eflags,load_cr0
+global load_eflags,load_cr0,load_tr
 global store_eflags,store_cr0
 
 load_eflags:
@@ -24,4 +24,8 @@ load_cr0:
 store_cr0:
     mov eax, [esp + 4] ; 获取参数
     mov cr0, eax ; 赋值cr0
+    ret
+
+load_tr:
+    ltr [esp + 4]
     ret

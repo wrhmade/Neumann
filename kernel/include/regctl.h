@@ -10,4 +10,5 @@ int load_eflags(void);
 void store_eflags(int eflags);
 int load_cr0(void);
 void store_cr0(int cr0);
+void load_tr(int tr);
 #endif

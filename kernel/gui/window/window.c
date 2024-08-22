@@ -9,6 +9,7 @@ Copyright W24 Studio
 #include <mm.h>
 #include <string.h>
 #include <graphic.h>
+#include <task.h>
 
 #define WINDOW_COLOR 0xFAFAFA
 #define WINDOW_TITLE_COLOR 0x07689F
@@ -116,4 +117,10 @@ void close_window(window_t *window)
     free(window->sheet->buf);
     sheet_free(window->sheet);
     free(window);
+}
+
+void window_settask(window_t *window,task_t* task)
+{
+    window->task=task;
+    task->window=window;
 }

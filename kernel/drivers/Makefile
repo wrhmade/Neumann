@@ -5,8 +5,12 @@ default:
 	$(MAKE) -C io
 	$(MAKE) -C mouse
 	$(MAKE) -C keyboard
+	$(MAKE) -C timer
+	$(MAKE) -C buzzer
 
 clean:
 	$(MAKE) -C io clean
 	$(MAKE) -C mouse clean
 	$(MAKE) -C keyboard clean
+	$(MAKE) -C timer clean
+	$(MAKE) -C buzzer clean
