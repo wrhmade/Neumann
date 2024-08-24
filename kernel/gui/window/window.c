@@ -39,6 +39,9 @@ void window_init(window_t *window,sheet_t *sheet,uint32_t xsize,uint32_t ysize,c
     sheet->window=window;
     window->xsize=xsize;
     window->ysize=ysize;
+    window->task=NULL;
+    window->console=NULL;
+    window->isconsole=0;
     strcpy(window->title,title);
 }
 

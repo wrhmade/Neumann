@@ -13,6 +13,7 @@ Copyright W24 Studio
 #include <regctl.h>
 #include <macro.h>
 #include <binfo.h>
+#include <fifo.h>
 
 extern void farjmp(int,int);
  
@@ -54,6 +55,8 @@ task_t *task_alloc()
             task->my_retval.pid = -1;      // 这里是新增的部分
             task->my_retval.val = -114514; // 这里是新增的部分
             task->window=NULL;
+            task->fifobuf=(uint32_t *)malloc(sizeof(uint32_t)*128);
+            fifo_init(&task->fifo,128,task->fifobuf);
             return task;
         }
     }
@@ -136,3 +139,14 @@ int task_pid(task_t *task)
 }
 
 
+
+task_t *create_kernel_task(void *entry)
+{
+    task_t *new_task;
+    new_task = task_alloc();
+    new_task->tss.esp = (uint32_t) malloc(64 * 1024) + 64 * 1024 - 4;
+    new_task->tss.eip = (int) entry;
+    new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
+    new_task->tss.cs = 1 * 8;
+    return new_task;
+}

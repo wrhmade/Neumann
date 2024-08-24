@@ -41,6 +41,9 @@ menu:
     db "A.Shut Down",13,10
 	db "Select:",0
 
+vbe_not_support db "This resolution is not suitable for your computer. Please check your graphics card VBE version (must be 2.0 or above), or if your graphics card supports this resolution.",0
+vga_driver db "Alternatively, can you use a VGA driver(Y/N,Selecting N will restart)?",0
+
 LABEL_START:
     mov ax, cs
     mov ds, ax
@@ -161,7 +164,7 @@ LABEL_FILE_LOADED:
     call putstr
     mov si,menu
     call putstr
-.loop
+select_loop
     mov ah,00h
     int 16h
     cmp al,0dh
@@ -183,12 +186,12 @@ LABEL_FILE_LOADED:
     cmp al,"8"
     jz .vbe8
     cmp al,"9"
-    jz .reboot
+    jz reboot
     cmp al,"a"
-    jz .shutdown
+    jz shutdown
     cmp al,"A"
-    jz .shutdown
-    jmp .loop
+    jz shutdown
+    jmp select_loop
 .vbe1:
     mov word[xsize],640
     mov word[ysize],480
@@ -221,7 +224,7 @@ LABEL_FILE_LOADED:
     mov word[xsize],2560
     mov word[ysize],1440
     jmp LABLE_SETVBE
-.shutdown:
+shutdown:
 	mov	ax,5301h
 	xor	bx,bx
 	int	15h
@@ -232,11 +235,11 @@ LABEL_FILE_LOADED:
 	mov	bl,01h
 	mov	cx,0003h
 	int	15h
-	jmp .loop
+	jmp select_loop
 
-.reboot:
+reboot:
 	jmp 0xffff:0000
-	jmp .loop
+	jmp select_loop
 
 
 LABLE_SETVBE:
@@ -301,10 +304,47 @@ save_vbe_info:
     mov dword[gs:vram],eax
     jmp LABLE_ENTER_PMODE
 scrn320:
-    mov al,0x13 ;VGA显卡，320x200x8位彩色
-    mov ah,0
-    int 0x10
+    ; mov al,0x13 ;VGA显卡，320x200x8位彩色
+    ; mov ah,0
+    ; int 0x10
+    call cls
+    mov si,vbe_not_support
+    call putstr
+    mov ah,0eh
+    mov al,13
+    int 10h
+    mov ah,0eh
+    mov al,10
+    int 10h
+    mov si,vga_driver
+    call putstr
+    mov ah,00h
+    int 16h
+    cmp al,'n'
+    jz reboot
+    cmp al,'N'
+    jz reboot
+    cmp al,'Y'
+    jz vga
+    cmp al,'y'
+    jz vga
+    jmp $
 
+vga:
+    mov ah,00h
+    mov al,13h
+    int 10h
+
+    mov ax,0x00
+    mov gs,ax
+    mov byte [vmode],8 ;
+    mov ax,320
+    mov word[gs:scrnx],ax  ; x分辨率
+    mov ax,200
+    mov word[gs:scrny],ax  ; y分辨率
+    mov eax,0x000a0000
+    mov dword[gs:vram],eax
+    jmp LABLE_ENTER_PMODE
 stop16:
     hlt 
     jmp stop16

@@ -8,13 +8,16 @@ Copyright W24 Studio
 #define WINDOW_H
 #include <stdint.h>
 #include <task.h>
-typedef struct SHEET sheet_t;;
+typedef struct SHEET sheet_t;
+typedef struct CONSOLE console_t;
 typedef struct WINDOW
 {
     sheet_t *sheet;
     uint32_t xsize,ysize;
     char title[60];
     task_t *task;
+    int isconsole;
+    console_t *console;
 }window_t;
 
 window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv);

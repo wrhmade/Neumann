@@ -17,10 +17,19 @@ Copyright W24 Studio
 #define PIT_CTRL    0x0043
 #define PIT_CNT0    0x0040
 
+char s[60];
+extern taskctl_t *taskctl;
 
 static void timer_callback(registers_t *regs)
 {
     task_switch();
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    // sprintf(s,"Running:%d",taskctl->running);
+    // boxfill(binfo->vram,binfo->scrnx,0,0,8*strlen(s)-1,15,0xFFFFFF);
+    // putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFF0000,s);
+    // sprintf(s,"Now:%d",taskctl->now);
+    // boxfill(binfo->vram,binfo->scrnx,0,16,8*strlen(s)-1,31,0xFFFFFF);
+    // putstr_ascii(binfo->vram,binfo->scrnx,0,16,0xFF0000,s);
 }
 void init_timer(uint32_t freq)
 {

@@ -20,6 +20,7 @@ Copyright W24 Studio
 #include <timer.h>
 #include <task.h>
 #include <stddef.h>
+#include <console.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -32,16 +33,6 @@ int process=0;
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
 #define PROCESS_SUM 9
 
-task_t *create_kernel_task(void *entry)
-{
-    task_t *new_task;
-    new_task = task_alloc();
-    new_task->tss.esp = (uint32_t) malloc(64 * 1024) + 64 * 1024 - 4;
-    new_task->tss.eip = (int) entry;
-    new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
-    new_task->tss.cs = 1 * 8;
-    return new_task;
-}
 
 void process_forward(void)
 {
@@ -81,7 +72,8 @@ void krnlc_main(void)
 	sheet_t *sht_mouse;
 	uint32_t *buf_mouse;
 	sheet_t *sht;
-	
+	sheet_t *keywin;
+	console_t *console;
 	
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
@@ -107,6 +99,7 @@ void krnlc_main(void)
 
 	memtotal=init_mem();process_forward();
 	sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
+	binfo->memtotal=memtotal;
 	putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
 
@@ -158,15 +151,12 @@ void krnlc_main(void)
 	uint8_t mouse_data,keyboard_data;
 
 
-	window_t *window=create_window("The First Window",200,200,-1);
-	show_window(window);
-	move_window(window,binfo->scrnx/2,binfo->scrny/2);
-	window_t *window2=create_window("The Second Window",400,200,-1);
-	show_window(window2);
-	move_window(window2,50,50);
+	// window_t *window=create_window("The First Window",200,200,-1);
+	// show_window(window);
+	// move_window(window,binfo->scrnx/2,binfo->scrny/2);
+	console=open_console();
+	keywin=console->window->sheet;
 
-	
-	
 
 	int _free,free;
 	for(;;)
@@ -208,6 +198,7 @@ void krnlc_main(void)
 							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
 							{
 								sheet_updown(sht,shtctl->top-1);
+								keywin=sht;
 								if (0 <= x && x < sht->bxsize && 0 <= y && y < 18) {
     		                        mmx = mouse_x;
     		                        mmy = mouse_y;
@@ -216,7 +207,18 @@ void krnlc_main(void)
     		                    }
 								if(sht->bxsize-17 <= x && x<= sht->bxsize-1 && 1<=y && y<=17)
 								{
-									close_window(sht->window);
+									if(sht->window->isconsole)
+									{
+										close_console(sht->window->console);
+									}
+									else
+									{
+										if(sht->window->task!=NULL)
+										{
+											task_remove(sht->window->task);
+										}
+										close_window(sht->window);
+									}
 								}
 								break;
 							}
@@ -245,16 +247,7 @@ void krnlc_main(void)
 		if(fifo_status(&decoded_key)>0)
 		{
 			keyboard_data=fifo_get(&decoded_key);
-			if(keyboard_data=='w')
-			{
-				window=create_window("Hello",100,50,-1);
-				show_window(window);
-				move_window(window,binfo->scrnx/2-50,binfo->scrny/2-25);
-				task_t *task_b=create_kernel_task(taskb_main);
-				window_settask(window,task_b);
-				task_run(task_b);
-
-			}
+			fifo_put(&keywin->window->task->fifo,keyboard_data+256);
 		}
 		
 

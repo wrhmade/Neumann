@@ -7,6 +7,7 @@ Copyright W24 Studio
 #ifndef TASK_H
 #define TASK_H
 #include <stdint.h>
+#include <fifo.h>
 typedef struct WINDOW window_t;
  
 typedef struct TSS32 {
@@ -26,6 +27,8 @@ typedef struct TASK {
     int32_t flags;
     tss32_t tss;
     window_t *window;
+    fifo_t fifo;
+    uint32_t *fifobuf;
     exit_retval_t my_retval;
 } task_t;
  
@@ -48,4 +51,5 @@ task_t *task_now();
 int task_pid(task_t *task);
 void task_exit(int value);
 int task_wait(int pid);
+task_t *create_kernel_task(void *entry);
 #endif

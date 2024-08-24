@@ -4,7 +4,7 @@ include ../config.txt
 OBJS=asmhead/asmhead.obj main/main.obj asm/nasmfunc.obj gui/graphic/graphic.obj gui/desktop/desktop.obj font/font.obj gdtidt/gdtidt.obj gdtidt/gdtasm.obj \
 	int/int.obj int/intasm.obj lib/string/string.obj lib/sprintf/sprintf.obj drivers/io/io.obj drivers/mouse/mouse.obj drivers/keyboard/keyboard.obj fifo/fifo.obj \
 	drivers/keyboard/keymap.obj mm/mm.obj mm/mmasm.obj regctl/regctl.obj gui/sheet/sheet.obj gui/window/window.obj task/task.obj task/farjmp.obj drivers/timer/timer.obj \
-	drivers/buzzer/buzzer.obj
+	drivers/buzzer/buzzer.obj user/console/console.obj
 
 default:
 	$(MAKE) -C asmhead
@@ -20,6 +20,7 @@ default:
 	$(MAKE) -C mm
 	$(MAKE) -C regctl
 	$(MAKE) -C task
+	$(MAKE) -C user
 	$(LD) -s -Ttext 0x100000 -o kernel.bin $(OBJS) -e krnl_entry
 
 clean:
@@ -36,6 +37,7 @@ clean:
 	$(MAKE) -C mm clean
 	$(MAKE) -C regctl clean
 	$(MAKE) -C task clean
+	$(MAKE) -C user clean
 	$(DEL) kernel.bin
 
 	

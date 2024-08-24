@@ -11,5 +11,6 @@ struct BOOTINFO
 {
 	uint16_t vmode,scrnx,scrny;
 	uint32_t *vram;
+	uint32_t memtotal;
 } __attribute__((packed)); 
 #endif
