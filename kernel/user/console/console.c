@@ -128,6 +128,10 @@ static int console_putchar_sub(console_t *console,char c,int refresh)
     {
         console_movcur(console,(console->curx + 4) & ~(4 - 1),console->cury);
     }
+     else if(c=='\r')
+    {
+        console_movcur(console,0,console->cury);
+    }
     else if(c=='\b')
     {
         console_movcur(console,console->curx-1,console->cury);
@@ -245,6 +249,7 @@ void console_main()
 	for(;;)
 	{
         console_putstr(task->window->console,"[Command]");
+
         sp=console_input(task->window->console,80);
         cmd_run(task->window->console,sp);
         free(sp);
