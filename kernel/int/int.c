@@ -10,6 +10,7 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <stdio.h>
 #include <macro.h>
+#include <fault.h>
 
 static isr_t interrupt_handlers[256];
 
@@ -18,10 +19,9 @@ void isr_handler(registers_t regs)
     struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     asm_cli();
 
-   char s[20];
-   sprintf(s,"ISR:%d",regs.int_no);
 
-   putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFF0000,s);
+    fault_process(regs);
+
     while (1);
 }
 

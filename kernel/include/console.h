@@ -27,4 +27,5 @@ char *console_input(console_t *console,int len);
 void cmd_run(console_t *console,char *cmdline);
 
 void cmd_mem(console_t *console);
+void cmd_start(console_t *console,char *cmdline);
 #endif

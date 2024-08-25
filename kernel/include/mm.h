@@ -30,4 +30,5 @@ uint32_t free_space_total(void);
 
 void *malloc(uint32_t size);
 void free(void *p);
+void *realloc(void *buffer, int size);
 #endif

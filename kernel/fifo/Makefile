@@ -5,4 +5,4 @@ default:
 	$(GCC) -c fifo.c -o fifo.obj -I../include
 
 clean:
-	-$(DEL) gdtidt.obj
+	-$(DEL) fifo.obj

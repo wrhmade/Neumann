@@ -182,9 +182,8 @@ void console_cleanscreen(console_t *console)
 
 char *console_input(console_t *console,int len)
 {
-    task_t *task=task_now();
+    task_t *task=console->window->task;
     char *str=(char *)malloc(sizeof(char)*(len+1));
-    memset(str,0,sizeof(str));
     int i,index=0,line=0;
     
     for(;;)
@@ -241,15 +240,13 @@ void console_main()
 
     console_putstr(task->window->console,"Neumann Console\n\tCopyright(c) 2023-2024 W24 Studio & 71GN Deep Space\n\n");
 
-    char cmdline[81];
     char *sp;
 
 	for(;;)
 	{
         console_putstr(task->window->console,"[Command]");
         sp=console_input(task->window->console,80);
-        strcpy(cmdline,sp);
-        cmd_run(task->window->console,cmdline);
+        cmd_run(task->window->console,sp);
         free(sp);
 	}
 }
@@ -264,6 +261,10 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strcmp(cmdline,"exit")==0)
     {
         close_console(console);
+    }
+    else if(strcmp(cmdline,"cls")==0)
+    {
+        console_cleanscreen(console);
     }
     else if(strcmp(cmdline,"")==0)
     {

@@ -48,7 +48,7 @@ make full
 > make full -j8
 > ```
 
-如果提示没有报错，请看看目录下是否出现一个叫做<kbd>bootfd.img</kbd>的文件。如果说出现了，那么恭喜你，你成功地编译了这个系统。
+如果提示没有报错，请看看目录下是否出现boothd.img</kbd><kbd>boothd.vhd</kbd><kbd>boothd.vmdk</kbd>这三个文件。如果说出现了，那么恭喜你，你成功地编译了这个系统。
 
 你可以输入以下命令来运行：
 
@@ -70,15 +70,7 @@ make run
 > make fastbuild
 > ```
 
-### 生成光盘映像
 
-要想生成光盘映像，你可以在bash下输入：
-
-```bash
-bash ./mkiso.sh
-```
-
-该命令会生成一个叫<kbd>bootcd.iso</kbd>的iso映像文件，你可以自行刻录到CD上并从光盘启动。
 
 ## 源代码贡献者
 

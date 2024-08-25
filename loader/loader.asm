@@ -6,7 +6,7 @@ OffsetOfKernelFile          equ 0h  ; Kernel的偏移
 
     jmp LABEL_START
  
-%include "fat12hdr.inc"
+%include "fat16hdr.inc"
 %include "load.inc"
 %include "pm.inc"
 %include "vbe.inc"
@@ -83,7 +83,7 @@ LABEL_CMP_FILENAME: ; 比对文件名
     jz LABEL_FILENAME_FOUND ; 若相等，说明文件名完全一致，表示找到，进行找到后的处理
     dec cx ; cx减1，表示读取1个字符
     lodsb ; 将ds:si的内容置入al，si加1
-    cmp al, byte [es:di] ; 此字符与LOADER  BIN中的当前字符相等吗？
+    cmp al, byte [es:di] ; 此字符与KERNEL  BIN中的当前字符相等吗？
     jz LABEL_GO_ON ; 下一个文件名字符
     jmp LABEL_DIFFERENT ; 下一个文件块
 LABEL_GO_ON:
@@ -139,7 +139,7 @@ LABEL_GOON_LOADING_FILE: ; 加载文件
     call ReadSector ; 读取Kernel第一个扇区
     pop ax ; 加载FAT号
     call GetFATEntry ; 加载FAT项
-    cmp ax, 0FFFh
+    cmp ax, 0FFFFh
     jz LABEL_FILE_LOADED ; 若此项=0FFF，代表文件结束，直接跳入Kernel
     push ax ; 重新存储FAT号，但此时的FAT号已经是下一个FAT了
     mov dx, RootDirSectors
@@ -148,8 +148,8 @@ LABEL_GOON_LOADING_FILE: ; 加载文件
     add bx, [BPB_BytsPerSec] ; 将bx指向下一个扇区开头
     jmp LABEL_GOON_LOADING_FILE ; 加载下一个扇区
 
+
 LABEL_FILE_LOADED:
-    call KillMotor ; 关闭软驱马达
  
     mov dh, 1 ; "Ready."
  
@@ -390,82 +390,100 @@ DispStr:
     int 10h ; 显示字符
     ret
 
-ReadSector:
-    push bp
-    mov bp, sp
-    sub esp, 2 ; 空出两个字节存放待读扇区数（因为cl在调用BIOS时要用）
- 
-    mov byte [bp-2], cl
-    push bx ; 这里临时用一下bx
-    mov bl, [BPB_SecPerTrk]
-    div bl ; 执行完后，ax将被除以bl（每磁道扇区数），运算结束后商位于al，余数位于ah，那么al代表的就是总磁道个数（下取整），ah代表的是剩余没除开的扇区数
-    inc ah ; +1表示起始扇区（这个才和BIOS中的起始扇区一个意思，是读入开始的第一个扇区）
-    mov cl, ah ; 按照BIOS标准置入cl
-    mov dh, al ; 用dh暂存位于哪个磁道
-    shr al, 1 ; 每个磁道两个磁头，除以2可得真正的柱面编号
-    mov ch, al ; 按照BIOS标准置入ch
-    and dh, 1 ; 对磁道模2取余，可得位于哪个磁头，结果已经置入dh
-    pop bx ; 将bx弹出
-    mov dl, [BS_DrvNum] ; 将驱动器号存入dl
-.GoOnReading: ; 万事俱备，只欠读取！
-    mov ah, 2 ; 读盘
-    mov al, byte [bp-2] ; 将之前存入的待读扇区数取出来
-    int 13h ; 执行读盘操作
-    jc .GoOnReading ; 如发生错误就继续读，否则进入下面的流程
- 
-    add esp, 2
-    pop bp ; 恢复堆栈
- 
+ReadSector: ; 读硬盘扇区
+; 从第eax号扇区开始，读取cl个扇区至es:bx
+    push esi
+    push di
+    push es
+    push bx
+    mov esi, eax
+    mov di, cx ; 备份ax,cx
+
+; 读硬盘 第一步：设置要读取扇区数
+    mov dx, 0x1f2
+    mov al, cl
+    out dx, al
+
+    mov eax, esi ; 恢复ax
+
+; 第二步：写入扇区号
+    mov dx, 0x1f3
+    out dx, al ; LBA 7~0位，写入0x1f3
+
+    mov cl, 8
+    shr eax, cl ; LBA 15~8位，写入0x1f4
+    mov dx, 0x1f4
+    out dx, al
+
+    shr eax, cl
+    mov dx, 0x1f5
+    out dx, al ; LBA 23~16位，写入0x1f5
+
+    shr eax, cl
+    and al, 0x0f ; LBA 27~24位
+    or al, 0xe0 ; 表示当前硬盘
+    mov dx, 0x1f6 ; 写入0x1f6
+    out dx, al
+
+; 第三步：0x1f7写入0x20，表示读
+    mov dx, 0x1f7 
+    mov al, 0x20
+    out dx, al
+
+; 第四步：检测硬盘状态
+.not_ready:
+    nop
+    in al, dx ; 读入硬盘状态
+    and al, 0x88 ; 分离第4位，第7位
+    cmp al, 0x08 ; 硬盘不忙且已准备好
+    jnz .not_ready ; 不满足，继续等待
+
+; 第五步：将数据从0x1f0端口读出
+    mov ax, di ; di为要读扇区数，共需读di * 512 / 2次
+    mov dx, 256
+    mul dx
+    mov cx, ax
+    
+    mov dx, 0x1f0
+.go_on_read:
+    in ax, dx
+    mov [es:bx], ax
+    add bx, 2
+    loop .go_on_read
+; 结束
+    pop bx
+    pop es
+    pop di
+    pop esi
     ret
 
-GetFATEntry:
+GetFATEntry: ; 返回第ax个簇的值
     push es
     push bx
     push ax ; 都会用到，push一下
-    mov ax, BaseOfKernelFile ; 获取Kernel的基址
-    sub ax, 0100h ; 留出4KB空间
-    mov es, ax ; 此处就是缓冲区的基址
-    pop ax ; ax我们就用不到了
-    mov byte [bOdd], 0 ; 设置bOdd的初值
-    mov bx, 3
-    mul bx ; dx:ax=ax * 3（mul的第二重用法：如有进位，高位将放入dx）
+    mov ax, BaseOfLoader
+    sub ax, 0100h
+    mov es, ax
+    pop ax
     mov bx, 2
-    div bx ; dx:ax / 2 -> dx：余数 ax：商
-; 此处* 1.5的原因是，每个FAT项实际占用的是1.5扇区，所以要把表项 * 1.5
-    cmp dx, 0 ; 没有余数
-    jz LABEL_EVEN
-    mov byte [bOdd], 1 ; 那就是奇数了
-LABEL_EVEN:
-    ; 此时ax中应当已经存储了待查找FAT相对于FAT表的偏移，下面我们借此来查找它的扇区号
-    xor dx, dx ; dx置0
+    mul bx ; 每一个FAT项是两字节，给ax乘2就是偏移
+LABEL_GET_FAT_ENTRY:
+    ; 将ax变为扇区号
+    xor dx, dx
     mov bx, [BPB_BytsPerSec]
-    div bx ; dx:ax / 512 -> ax：商（扇区号）dx：余数（扇区内偏移）
-    push dx ; 暂存dx，后面要用
-    mov bx, 0 ; es:bx：(BaseOfKernelFile - 4KB):0
-    add ax, SectorNoOfFAT1 ; 实际扇区号
-    mov cl, 2
-    call ReadSector ; 直接读2个扇区，避免出现跨扇区FAT项出现bug
-    pop dx ; 由于ReadSector未保存dx的值所以这里保存一下
-    add bx, dx ; 现在扇区内容在内存中，bx+=dx，即是真正的FAT项
-    mov ax, [es:bx] ; 读取之
- 
-    cmp byte [bOdd], 1
-    jnz LABEL_EVEN_2 ; 是偶数，则进入LABEL_EVEN_2
-    shr ax, 4 ; 高4位为真正的FAT项
-LABEL_EVEN_2:
-    and ax, 0FFFh ; 只保留低4位
-
-LABEL_GET_FAT_ENRY_OK: ; 胜利执行
+    div bx ; dx = ax % 512, ax /= 512
+    push dx ; 保存dx的值
+    mov bx, 0 ; es:bx已指定
+    add ax, SectorNoOfFAT1 ; 对应扇区号
+    mov cl, 1 ; 一次读一个扇区即可
+    call ReadSector ; 直接读入
+    ; bx 到 bx + 512 处为读进扇区
+    pop dx
+    add bx, dx ; 加上偏移
+    mov ax, [es:bx] ; 读取，那么这里就是了
+LABEL_GET_FAT_ENTRY_OK: ; 胜利执行
     pop bx
     pop es ; 恢复堆栈
-    ret
-
-KillMotor: ; 关闭软驱马达
-    push dx
-    mov dx, 03F2h ; 软驱端口
-    mov al, 0 ; 软盘驱动器：0，复位软盘驱动器，禁止DMA中断，关闭软驱马达
-    out dx, al ; 执行
-    pop dx
     ret
 
 LABEL_GDT:          Descriptor 0,            0, 0                            ; 占位用描述符

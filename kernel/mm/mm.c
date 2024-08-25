@@ -8,6 +8,7 @@ Copyright W24 Studio
 #include <regctl.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #define EFLAGS_AC_BIT		0x00040000
 #define CR0_CACHE_DISABLE	0x60000000
@@ -143,6 +144,21 @@ void *malloc(uint32_t size)
         p += 16;
     }
     return (void *) p;
+}
+
+void *realloc(void *buffer, int size)
+{
+    void *res = NULL;
+    if (!buffer) return malloc(size); // buffer为NULL，则realloc相当于malloc
+    if (!size) { // size为NULL，则realloc相当于free
+        free(buffer);
+        return NULL;
+    }
+    // 否则实现扩容
+    res = malloc(size); // 分配新的缓冲区
+    memcpy(res, buffer, size); // 将原缓冲区内容复制过去
+    free(buffer); // 释放原缓冲区
+    return res; // 返回新缓冲区
 }
 
 void free(void *p)

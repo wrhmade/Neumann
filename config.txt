@@ -2,16 +2,25 @@ GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall
 LD	=ld -nostdlib -m $(LD_FORMAT)
 OBJCOPY	=objcopy
 NASM	=nasm
-QEMU_IMG= qemu-img
-MFORMAT = mformat
-MCOPY   = mcopy
 MAKE	=make
 BIN2OBJ =./bin2obj
 DEL	=   rm -f
+DD = dd
 
 QEMU = qemu-system-i386
+QEMU_IMG = qemu-img
 
-IMAGENAME	=	bootfd.img
+FTCOPY = tools/ftcopy
+FTFORMAT = tools/ftformat
+FTIMGCREATE = tools/ftimgcreate
+FTLS = tools/ftls
+FTRM = tools/ftrm
+HEXVIEW = tools/hexview
+FVDISK = tools/fvdisk
+
+IMAGENAME	=	boothd.img
+IMAGENAME_VHD	=	boothd.vhd
+IMAGENAME_VMDK	=	boothd.vmdk
 NASM_FORMAT	=	elf
 LD_FORMAT	=	elf_i386
 
