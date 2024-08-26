@@ -8,6 +8,7 @@ Copyright W24 Studio
 #define TASK_H
 #include <stdint.h>
 #include <fifo.h>
+#define MAX_FILE_OPEN_PER_TASK 32
 typedef struct WINDOW window_t;
  
 typedef struct TSS32 {
@@ -30,6 +31,7 @@ typedef struct TASK {
     fifo_t fifo;
     uint32_t *fifobuf;
     exit_retval_t my_retval;
+    int fd_table[MAX_FILE_OPEN_PER_TASK];
 } task_t;
  
 #define MAX_TASKS 1000

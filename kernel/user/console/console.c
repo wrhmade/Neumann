@@ -15,6 +15,8 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <macro.h>
 #include <stdint.h>
+#include <hd.h>
+#include <fat16.h>
 
 void console_main();
 
@@ -271,6 +273,67 @@ void cmd_run(console_t *console,char *cmdline)
     {
         console_cleanscreen(console);
     }
+    else if(strcmp(cmdline,"newconsole")==0)
+    {
+        open_console();
+    }
+    else if(strcmp(cmdline,"count")==0)
+    {
+        cmd_count(console);
+    }
+    else if(strcmp(cmdline,"dir")==0)
+    {
+        cmd_dir(console);
+    }
+    else if(strncmp(cmdline,"echo ",5)==0)
+    {
+        console_putstr(console,cmdline+5);
+        console_putchar(console,'\n');
+    }
+    else if(strncmp(cmdline,"mkfile ",7)==0)
+    {
+        fat16_create_file(NULL,cmdline+7);
+    }
+    else if(strncmp(cmdline,"rdfile ",7)==0)
+    {
+        fileinfo_t finfo;
+        if(fat16_open_file(&finfo,cmdline+7)==-1)
+        {
+            console_putstr(console,"No such file.\n");
+        }
+        else
+        {
+            int status;
+            char *buf = (char *) malloc(finfo.size + 5);
+            status = fat16_read_file(&finfo, buf);
+            console_putstr(console,buf);
+            console_putchar(console,'\n');
+            free(buf);
+        }
+    }
+    else if(strcmp(cmdline,"wrfile")==0)
+    {
+        fileinfo_t finfo;
+        if(fat16_open_file(&finfo,"114514.txt")==-1)
+        {
+            console_putstr(console,"No such file.\n");
+        }
+        else
+        {
+            int status;
+            char *buf = (char *) malloc(512);
+            strcpy(buf,"1145141919810");
+            status = fat16_write_file(&finfo, buf, strlen(buf));
+            free(buf);
+        }
+    }
+    else if(strncmp(cmdline,"del ",4)==0)
+    {
+        if(fat16_delete_file(cmdline+4)!=0)
+        {
+            console_putstr(console,"No such file or delete error.\n");
+        }
+    }
     else if(strcmp(cmdline,"")==0)
     {
         
@@ -291,4 +354,29 @@ void cmd_mem(console_t *console)
     console_putstr(console,s);
     sprintf(s,"Used:%uMB\n",(binfo->memtotal-free_space_total())/1024/1024);
     console_putstr(console,s);
+}
+
+void cmd_count(console_t *console)
+{
+    char s[60];
+    int tick=0;
+    for(;;)
+    {
+        sprintf(s,"%010u\r",tick);
+        console_putstr(console,s);
+        tick++;
+    }
+}
+
+void cmd_dir(console_t *console)
+{
+    int entries,i;
+    fileinfo_t *root_dir = read_dir_entries(&entries);
+    console_putstr(console,"Files on disk:\n");
+    for (i = 0; i < entries; i++)
+    {
+        console_putstr(console,root_dir[i].name);
+        console_putchar(console,'\n');
+    }
+    free(root_dir);
 }

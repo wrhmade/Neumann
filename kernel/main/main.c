@@ -21,12 +21,14 @@ Copyright W24 Studio
 #include <task.h>
 #include <stddef.h>
 #include <console.h>
+#include <cmos.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
 mdec_t mdec;
 
-sheet_t *global_shtctl;
+shtctl_t *global_shtctl;
+sheet_t *global_sht_back;
 int process=0;
 
 #define PROCESS_COLOR 0xFF0000
@@ -45,14 +47,40 @@ void process_forward(void)
 void taskb_main(void)
 {
 	task_t *task=task_now();
-	char s[10];
-	int tick=0;
-    
+	current_time_t *ctime=(current_time_t *)malloc(sizeof(current_time_t));
+	int year,month,day,hour,minute,second;
+	char iWeek_str[10],result[60];
+	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	for(;;)
 	{
-		sprintf(s,"%09u",tick);
-		putstr_ascii_sheet(task->window->sheet,0,18,0x000000,0xFFFFFF,s);
-		tick++;
+		get_current_time(ctime);
+		year=ctime->year;
+		month=ctime->month;
+		day=ctime->day;
+		hour=ctime->hour;
+		minute=ctime->min;
+		second=ctime->sec;
+		if(month==1 || month==2)
+		{
+			month+=12;
+			year--;
+		}
+		int iWeek=(day+2*month+3*(month+1)/5+year+year/4-year/100+year/400)%7;
+		switch(iWeek)
+		{
+			case 0:strcpy(iWeek_str,"Mon. ");break;
+			case 1:strcpy(iWeek_str,"Tues.");break;
+			case 2:strcpy(iWeek_str,"Wed. ");break;
+			case 3:strcpy(iWeek_str,"Thur.");break;
+			case 4:strcpy(iWeek_str,"Fri. ");break;
+			case 5:strcpy(iWeek_str,"Sat. ");break;
+			case 6:strcpy(iWeek_str,"Sun. ");break;
+		}
+		sprintf(result, "%04d/%02d/%02d %s", year, month, day,iWeek_str);
+		putstr_ascii_sheet(global_sht_back,binfo->scrnx-190,binfo->scrny-20,0x000000,DESKTOP_BACKCOLOR,result);
+		sprintf(result, "%02d:%02d:%02d", hour, minute,second);
+		putstr_ascii_sheet(global_sht_back,binfo->scrnx-69,binfo->scrny-20,0x000000,DESKTOP_BACKCOLOR,result);
+
 	}
 }
 
@@ -109,6 +137,7 @@ void krnlc_main(void)
 	sht_back  = sheet_alloc(shtctl);
     buf_back  = (uint32_t*) malloc(sizeof(uint32_t)*binfo->scrnx * binfo->scrny);
     sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny,-1);
+	global_sht_back=sht_back;
 	
 
 	process_forward();
@@ -159,6 +188,10 @@ void krnlc_main(void)
 
 
 	int _free,free;
+
+	task_t *task_b=create_kernel_task(taskb_main);
+	task_run(task_b);
+
 	for(;;)
 	{
 

@@ -23,7 +23,7 @@ ftls:ftls.c
 	$(GCC) ftls.c -o ftls
 
 ftrm:ftrm.c
-	$(GCC) ftls.c -o ftls
+	$(GCC) ftrm.c -o ftrm
 
 hexview:hexview.c
 	$(GCC) hexview.c -o hexview

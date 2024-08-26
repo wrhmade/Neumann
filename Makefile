@@ -9,6 +9,7 @@ $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
 	$(FTFORMAT) $(IMAGENAME) -t hd -f fat16
 	$(FTCOPY) loader/loader.bin -to -img $(IMAGENAME)
 	$(FTCOPY) kernel/kernel.bin -to -img $(IMAGENAME)
+	$(FTCOPY) res/test.txt -to -img $(IMAGENAME)
 	$(FVDISK) boot/boot.bin -o $(IMAGENAME) -s 0
 
 

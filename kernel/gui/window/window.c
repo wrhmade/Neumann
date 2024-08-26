@@ -92,7 +92,7 @@ void draw_window(window_t *window)
             }
         }
     }
-    putblock(window->sheet->buf,window->xsize,16,16,window->xsize-17,1,btn_close,16);
+    putblock(window->sheet->buf,window->xsize,16,16,window->xsize-17,2,btn_close,16);
     sheet_refresh(window->sheet,0,0,window->xsize,window->ysize);
 }
 

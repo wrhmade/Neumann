@@ -57,6 +57,12 @@ task_t *task_alloc()
             task->window=NULL;
             task->fifobuf=(uint32_t *)malloc(sizeof(uint32_t)*128);
             fifo_init(&task->fifo,128,task->fifobuf);
+            task->fd_table[0] = 0; // 标准输入，占位
+            task->fd_table[1] = 1; // 标准输出，占位
+            task->fd_table[2] = 2; // 标准错误，占位
+            for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
+                task->fd_table[i] = -1; // 其余文件均可用
+            }
             return task;
         }
     }
