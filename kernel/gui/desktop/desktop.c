@@ -10,13 +10,28 @@ Copyright W24 Studio
 #include <macro.h>
 #include <binfo.h>
 #include <stdint.h>
+#include <jpeg.h>
+#include <bmp.h>
+#include <fat16.h>
+#include <mm.h>
+#include <ini.h>
+#include <string.h>
+#include <task.h>
 void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize)
 {
+	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
     boxfill(buf,xsize,0,0,xsize-1,ysize-1,DESKTOP_BACKCOLOR);
+	char *value=(char *)malloc(sizeof(char)*10);
+	read_ini("neumann.ini","wallpaper","wallpaper",value);
+	if(strcmp(value,"true")==0)
+	{
+		load_wallpaper(buf,binfo->scrnx,binfo->scrny);
+	}
+	free(value);
 	
-    putstr_ascii(buf,xsize,xsize-24*8,ysize-77,ARGB(255,0,0,0),"Neumann Operating System");
-    putstr_ascii(buf,xsize,xsize-19*8,ysize-61,ARGB(255,0,0,0),"Version 0.8[Beta 6]");
-    putstr_ascii(buf,xsize,xsize-52*8,ysize-45,ARGB(255,0,0,0),"WARNING:THIS IS A BETA VERSION THAT MAY BE UNSTABLE.");
+    putstr_ascii(buf,xsize,xsize-15*8,ysize-77,ARGB(255,0,0,0),"Neumann操作系统");
+    putstr_ascii(buf,xsize,xsize-18*8,ysize-61,ARGB(255,0,0,0),"版本号0.8[Beta 6]");
+    putstr_ascii(buf,xsize,xsize-28*8,ysize-45,ARGB(255,0,0,0),"注意:这是测试版,可能会不稳定");
 }
 
 void draw_mouse(uint32_t *buf_mouse)
@@ -61,4 +76,73 @@ void draw_mouse(uint32_t *buf_mouse)
 			}
 		}
 	}
+}
+
+int load_wallpaper(uint32_t *vram,int x,int y)
+{
+	fileinfo_t *finfo;
+	char *buf,*filename;
+	struct DLL_STRPICENV *env;
+	struct RGB *picbuf;
+	int info[4],i,j,x0,y0;
+	uint8_t r,g,b;
+	filename=(char *)malloc(sizeof(char)*15);
+	if(read_ini("neumann.ini","wallpaper","wallpaper_filename",filename)!=0)
+	{
+		free(filename);
+		return -1;
+	}
+	finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
+	if(fat16_open_file(finfo,filename)!=0)
+	{
+		free(finfo);
+		free(filename);
+		return -1;
+	}
+	buf=(char *)malloc(sizeof(char)*(finfo->size+5));
+	fat16_read_file(finfo,buf);
+	env=(struct DLL_STRPICENV *)malloc(sizeof(struct DLL_STRPICENV));
+	if(info_BMP(env,info,finfo->size,buf)==0)
+	{
+		if(info_JPEG(env,info,finfo->size,buf)==0)
+		{
+			free(finfo);
+			free(buf);
+			free(env);
+			free(filename);
+			return -1;
+		}
+	}
+	picbuf=(struct RGB *)malloc(sizeof(struct RGB)*info[2]*info[3]);
+	if(info[0]==1)
+	{
+		decode0_BMP(env,finfo->size,buf,4,(unsigned char *)picbuf,0);
+	}
+	else
+	{
+		decode0_JPEG(env,finfo->size,buf,4,(unsigned char *)picbuf,0);
+	}
+	
+	x0 = (int) ((x - info[2]) / 2);
+	y0 = (int) ((y - info[3]) / 2);
+	
+
+	for(i=0;i<info[3];i++)
+	{
+		for(j=0;j<info[2];j++)
+		{
+			if(x0+j>=0 && x0+j<x && y0+i>=0 && y0+i<y)
+			{
+				r=picbuf[i*info[2]+j].r;
+				g=picbuf[i*info[2]+j].g;
+				b=picbuf[i*info[2]+j].b;
+				vram[(y0 + i) * x + (x0 + j)]=ARGB(255,r,g,b);
+			}
+		}
+	}
+	free(picbuf);
+	free(env);
+	free(buf);
+	free(finfo);
+	free(filename);
 }

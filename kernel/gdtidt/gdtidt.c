@@ -11,7 +11,8 @@ Copyright W24 Studio
  
 extern void gdt_flush(uint32_t);
 extern void idt_flush(uint32_t);
- 
+extern void syscall_handler();
+
 gdt_entry_t gdt_entries[4096];
 gdt_ptr_t gdt_ptr;
 idt_entry_t idt_entries[256];
@@ -110,6 +111,8 @@ static void init_idt()
     idt_set_gate(29, (uint32_t) isr29, 0x08, 0x8E);
     idt_set_gate(30, (uint32_t) isr30, 0x08, 0x8E);
     idt_set_gate(31, (uint32_t) isr31, 0x08, 0x8E);
+
+    
 
     idt_flush((uint32_t) &idt_ptr);
 

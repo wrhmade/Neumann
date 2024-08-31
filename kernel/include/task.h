@@ -32,6 +32,8 @@ typedef struct TASK {
     uint32_t *fifobuf;
     exit_retval_t my_retval;
     int fd_table[MAX_FILE_OPEN_PER_TASK];
+    int langmode;//0为ASCII英文，1为GB2312中文
+    unsigned char langbyte;
 } task_t;
  
 #define MAX_TASKS 1000

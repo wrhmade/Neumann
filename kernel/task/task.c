@@ -63,6 +63,8 @@ task_t *task_alloc()
             for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
                 task->fd_table[i] = -1; // 其余文件均可用
             }
+            task->langmode=0;
+            task->langbyte=0;
             return task;
         }
     }

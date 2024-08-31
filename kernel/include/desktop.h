@@ -9,4 +9,5 @@ Copyright W24 Studio
 #include <stdint.h>
 void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize);
 void draw_mouse(uint32_t *buf_mouse);
+int load_wallpaper(uint32_t *vram,int x,int y);
 #endif

@@ -12,12 +12,15 @@ Copyright W24 Studio
 #include <nasmfunc.h>
 #include <stdio.h>
 #include <string.h>
+#include <buzzer.h>
 
 void fault_process(registers_t regs)
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
     boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0x000000);
     
+    
+
     putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,"System Fault");
 
     char s[200];
@@ -37,6 +40,7 @@ void fault_process(registers_t regs)
 
     for(;;)
     {
+        beep(900000);
         asm_hlt();
     }
 }

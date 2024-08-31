@@ -7,9 +7,15 @@ default:
 $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
 	$(FTIMGCREATE) $(IMAGENAME) -t hd -size 80
 	$(FTFORMAT) $(IMAGENAME) -t hd -f fat16
-	$(FTCOPY) loader/loader.bin -to -img $(IMAGENAME)
-	$(FTCOPY) kernel/kernel.bin -to -img $(IMAGENAME)
-	$(FTCOPY) res/test.txt -to -img $(IMAGENAME)
+	$(FVDISK) loader/loader.bin -o $(IMAGENAME) -f 0
+	$(FVDISK) kernel/kernel.bin -o $(IMAGENAME) -f 0
+	$(FVDISK) kernel/font/HZK16.bin -o $(IMAGENAME) -f 0
+	$(FVDISK) kernel/font/HZK16F.bin -o $(IMAGENAME) -f 0
+	$(FVDISK) res/test.txt -o $(IMAGENAME) -f 0
+	$(FVDISK) res/neumann.ini -o $(IMAGENAME) -f 0
+	$(FVDISK) res/desktop.jpg -o $(IMAGENAME) -f 0
+	$(FVDISK) res/night.bmp -o $(IMAGENAME) -f 0
+	$(FVDISK) apps/myapp/myapp.bin -o $(IMAGENAME) -f 0
 	$(FVDISK) boot/boot.bin -o $(IMAGENAME) -s 0
 
 
@@ -17,6 +23,7 @@ full:
 	$(MAKE) -C boot
 	$(MAKE) -C loader
 	$(MAKE) -C kernel
+	$(MAKE) -C apps
 	$(MAKE) -C tools
 	$(MAKE) $(IMAGENAME)
 
@@ -28,6 +35,7 @@ clean_full:
 	$(MAKE) -C loader clean
 	$(MAKE) -C kernel clean
 	$(MAKE) -C tools clean
+	$(MAKE) -C apps clean
 
 fastbuild:
 	$(MAKE) clean_full

@@ -81,3 +81,43 @@ int strncmp(const char *str1, const char *str2, size_t n)
     return *str1 - *str2;
 }
 
+char* strstr(const char* str1, const char* str2)
+{
+    const char* s1;
+    const char* s2;
+    
+    if (!*str2) {
+        return (char*)str1; // 如果str2为空字符串，则返回str1
+    }
+ 
+    while (*str1) {
+        s1 = str1;
+        s2 = str2;
+ 
+        while (*s1 && *s2 && *s1 == *s2) {
+            s1++;
+            s2++;
+        }
+ 
+        if (!*s2) {
+            return (char*)str1; // 找到匹配的子字符串
+        }
+ 
+        str1++; // 没有找到，尝试下一个位置
+    }
+ 
+    return NULL; // 没有找到匹配的子字符串
+}
+
+char* strncpy(char* dest, const char* src, size_t n)
+{
+    size_t i;
+    for (i = 0; i < n && src[i] != '\0'; i++) {
+        dest[i] = src[i];
+    }
+    // 如果源字符串短于n，则目标字符串应以'\0'结尾
+    for (; i < n; i++) {
+        dest[i] = '\0';
+    }
+    return dest;
+}

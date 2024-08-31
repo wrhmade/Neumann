@@ -10,13 +10,25 @@ Copyright W24 Studio
 #include <mm.h>
 #include <graphic.h>
 #include <string.h>
+#include <task.h>
 
 void putstr_ascii_sheet(sheet_t *sht, int x, int y, uint32_t c, uint32_t b, char *s)
 {
+    task_t *task=task_now();
     int l=strlen(s);
     boxfill(sht->buf, sht->bxsize, x, y, x + l * 8 - 1, y + 15, b);
-    putstr_ascii(sht->buf, sht->bxsize, x, y, c, s);
-    sheet_refresh(sht, x - 8, y, x + l * 8, y + 16);
+    if (task->langmode != 0 && task->langbyte != 0) 
+    {
+        putstr_ascii(sht->buf, sht->bxsize, x, y, c, s);
+        sheet_refresh(sht, x - 8, y, x + l * 8, y + 16);
+    }
+    else
+    {
+        putstr_ascii(sht->buf, sht->bxsize, x, y, c, s);
+        sheet_refresh(sht, x, y, x + l * 8, y + 16);
+    }
+    
+    
 }
 
 // 初始化图层控制结构体函数

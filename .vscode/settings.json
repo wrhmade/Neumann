@@ -4,7 +4,25 @@
         "stdint.h": "c",
         "macro.h": "c",
         "console.h": "c",
-        "gdtidt.h": "c"
+        "gdtidt.h": "c",
+        "jpeg.h": "c",
+        "binfo.h": "c",
+        "fat16.h": "c",
+        "mm.h": "c",
+        "typeinfo": "c",
+        "window.h": "c",
+        "string.h": "c",
+        "stddef.h": "c",
+        "ini.h": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

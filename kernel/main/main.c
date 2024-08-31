@@ -22,6 +22,9 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <console.h>
 #include <cmos.h>
+#include <fat16.h>
+#include <ini.h>
+#include <string.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -33,7 +36,7 @@ int process=0;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 9
+#define PROCESS_SUM 10
 
 
 void process_forward(void)
@@ -108,7 +111,7 @@ void krnlc_main(void)
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2,binfo->scrny/2-240/2,binfo->scrnx/2+320/2,binfo->scrny/2+240/2,0xFFFFFF);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+58,binfo->scrny/2-240/2+198,binfo->scrnx/2-320/2+262,binfo->scrny/2-240/2+222,0x000000);
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+60,binfo->scrny/2-240/2+200,binfo->scrnx/2-320/2+260,binfo->scrny/2-240/2+220,0xC6C6C6);
-	putstr_ascii(binfo->vram,binfo->scrnx,binfo->scrnx/2-16*8/2,binfo->scrny/2-240/2+180,0,"Starting Neumann");
+	putstr_ascii_lmode(binfo->vram,binfo->scrnx,binfo->scrnx/2-16*8/2,binfo->scrny/2-240/2+180,0,"Starting Neumann",0);
 
 	// boxfill(binfo->vram,binfo->scrnx,20,20,300,300,0xFF0000);
 	// boxfill(binfo->vram,binfo->scrnx,40,40,320,320,0x00FF00);
@@ -148,7 +151,74 @@ void krnlc_main(void)
 	init_timer(100);
 	process_forward();
 
-	
+
+
+	fileinfo_t *finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
+	char *value=(char *)malloc(sizeof(char)*10);
+	if(read_ini("neumann.ini","System","load_hzk16",value)==0)
+	{
+		if(fat16_open_file(finfo,"hzk16.bin")==0 && strcmp(value,"true")==0)
+		{
+			//成功打开
+			binfo->hzk16=(char *)malloc(sizeof(char)*0x5d5d*32);
+			task_a->langmode=1;
+			fat16_read_file(finfo,binfo->hzk16);
+		}
+		else
+		{
+			//文件不存在
+			binfo->hzk16=NULL;
+			task_a->langmode=0;
+		}
+	}
+	else
+	{
+		//无法读出配置文件
+		binfo->hzk16=NULL;
+	}
+
+	if(read_ini("neumann.ini","System","load_hzk16f",value)==0)
+	{
+		if(fat16_open_file(finfo,"hzk16f.bin")==0  && strcmp(value,"true")==0)
+		{
+			//成功打开
+			binfo->hzk16f=(char *)malloc(sizeof(char)*0x5d5d*32);
+			if(binfo->hzk16==NULL)
+			{
+				task_a->langmode=2;
+			}
+			fat16_read_file(finfo,binfo->hzk16f);
+		}
+		else
+		{
+			//文件不存在
+			binfo->hzk16f=NULL;
+			if(binfo->hzk16!=NULL)
+			{
+				task_a->langmode=1;
+			}
+			else
+			{
+				task_a->langmode=0;
+			}
+		}
+	}
+	else
+	{
+		//无法读出配置文件
+		binfo->hzk16f=NULL;
+		if(binfo->hzk16!=NULL)
+		{
+			task_a->langmode=1;
+		}
+		else
+		{
+			task_a->langmode=0;
+		}
+	}
+	free(finfo);
+	free(value);
+	process_forward();	
 
 	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
 
@@ -179,10 +249,6 @@ void krnlc_main(void)
 	//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
 	uint8_t mouse_data,keyboard_data;
 
-
-	// window_t *window=create_window("The First Window",200,200,-1);
-	// show_window(window);
-	// move_window(window,binfo->scrnx/2,binfo->scrny/2);
 	console=open_console();
 	keywin=console->window->sheet;
 
@@ -191,7 +257,7 @@ void krnlc_main(void)
 
 	task_t *task_b=create_kernel_task(taskb_main);
 	task_run(task_b);
-
+	
 	for(;;)
 	{
 

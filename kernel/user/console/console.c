@@ -17,18 +17,30 @@ Copyright W24 Studio
 #include <stdint.h>
 #include <hd.h>
 #include <fat16.h>
-
+#include <binfo.h>
+#include <macro.h>
+#include <ini.h>
 void console_main();
+
 
 console_t *open_console(void)
 {
     console_t *console=(console_t *)malloc(sizeof(console_t));
-    window_t *window=create_window("Console",80*8+2,25*16+18+1,-1);
+    window_t *window;
+    task_t *task=task_now();
+    if(task->langmode==0)
+    {
+        window=create_window("Console",80*8+2,25*16+18+1,-1);
+    }
+    else if(task->langmode==1 || task->langmode==2)
+    {
+        window=create_window("控制台",80*8+2,25*16+18+1,-1);
+    }
     show_window(window);
     move_window(window,120,120);
-    task_t *task=create_kernel_task(console_main);
-    window_settask(window,task);
-    task_run(task);
+    task_t *console_task=create_kernel_task(console_main);
+    window_settask(window,console_task);
+    task_run(console_task);
     console->window=window;
     window->console=console;
     console->curx=console->cury=0;
@@ -57,15 +69,15 @@ void console_refresh(console_t *console)
     char s[2];
     int i,j;
     boxfill(console->window->sheet->buf,console->window->xsize,1,18,console->window->xsize-2,console->window->ysize-2,0x000000);
-    for(i=0;i<80;i++)
+    for(i=0;i<25;i++)
     {
-        for(j=0;j<25;j++)
+        for(j=0;j<80;j++)
         {
-            boxfill(console->window->sheet->buf,console->window->xsize,i*8+1,j*16+18,i*8+1+7,j*16+18+15,0x000000);
-            if(console->consbuf[i][j]!='\0')
+            boxfill(console->window->sheet->buf,console->window->xsize,j*8+1,i*16+18,j*8+1+7,i*16+18+15,0x000000);
+            if(console->consbuf[j][i]!='\0')
             {
-                s[0]=console->consbuf[i][j];
-                putstr_ascii(console->window->sheet->buf,console->window->xsize,i*8+1,j*16+18,0xFFFFFF,s);
+                s[0]=console->consbuf[j][i];
+                putstr_ascii(console->window->sheet->buf,console->window->xsize,j*8+1,i*16+18,0xFFFFFF,s);
             }
         }
     }
@@ -191,7 +203,7 @@ char *console_input(console_t *console,int len)
     task_t *task=console->window->task;
     char *str=(char *)malloc(sizeof(char)*(len+1));
     int i,index=0,line=0;
-    
+
     for(;;)
     {
         if(fifo_status(&task->fifo)>0)
@@ -240,6 +252,9 @@ char *console_input(console_t *console,int len)
 void console_main()
 {
     task_t *task=task_now();
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    
+    task->langmode=(binfo->hzk16==NULL)?((binfo->hzk16f==NULL)?0:2):1;
     boxfill(task->window->sheet->buf,task->window->xsize,1,18,task->window->xsize-2,task->window->ysize-2,0x000000);
     sheet_refresh(task->window->sheet,0,0,task->window->xsize-1,task->window->ysize-1);
     console_refresh(task->window->console);
@@ -285,6 +300,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_dir(console);
     }
+    else if(strcmp(cmdline,"dzero")==0)
+    {
+        int a=114514/(1919810-1919810);
+    }
     else if(strncmp(cmdline,"echo ",5)==0)
     {
         console_putstr(console,cmdline+5);
@@ -299,7 +318,14 @@ void cmd_run(console_t *console,char *cmdline)
         fileinfo_t finfo;
         if(fat16_open_file(&finfo,cmdline+7)==-1)
         {
-            console_putstr(console,"No such file.\n");
+            if(task->langmode==0)
+            {
+                console_putstr(console,"No such file.\n");
+            }
+            else if(task->langmode==1 || task->langmode==2)
+            {
+                console_putstr(console,"没有这样的文件.\n");
+            } 
         }
         else
         {
@@ -316,7 +342,14 @@ void cmd_run(console_t *console,char *cmdline)
         fileinfo_t finfo;
         if(fat16_open_file(&finfo,"114514.txt")==-1)
         {
-            console_putstr(console,"No such file.\n");
+            if(task->langmode==0)
+            {
+                console_putstr(console,"No such file.\n");
+            }
+            else if(task->langmode==1 || task->langmode==2)
+            {
+                console_putstr(console,"没有这样的文件.\n");
+            } 
         }
         else
         {
@@ -331,8 +364,19 @@ void cmd_run(console_t *console,char *cmdline)
     {
         if(fat16_delete_file(cmdline+4)!=0)
         {
-            console_putstr(console,"No such file or delete error.\n");
+            if(task->langmode==0)
+            {
+                console_putstr(console,"No such file or delete error.\n");
+            }
+            else if(task->langmode==1 || task->langmode==2)
+            {
+                console_putstr(console,"没有这样的文件或删除时出错.\n");
+            } 
         }
+    }
+    else if(strncmp(cmdline,"langmode ",9)==0)
+    {
+        cmd_langmode(console,cmdline[9]-'0');
     }
     else if(strcmp(cmdline,"")==0)
     {
@@ -340,7 +384,14 @@ void cmd_run(console_t *console,char *cmdline)
     }
     else 
     {
-        console_putstr(console,"Invalid command.\n");
+        if(task->langmode==0)
+        {
+            console_putstr(console,"Invalid command.\n");
+        }
+        else if(task->langmode==1 || task->langmode==2)
+        {
+            console_putstr(console,"此命令无效.\n");
+        }
     }
 }
 
@@ -370,13 +421,85 @@ void cmd_count(console_t *console)
 
 void cmd_dir(console_t *console)
 {
-    int entries,i;
+    int entries,i,total=0,total_kb=0;;
     fileinfo_t *root_dir = read_dir_entries(&entries);
-    console_putstr(console,"Files on disk:\n");
+    task_t *task=task_now();
+    if(task->langmode==0)
+    {
+        console_putstr(console,"Files on disk:\n");
+    }
+    else if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"磁盘上的文件:\n");
+    }
+    char s[50],s2[10];
     for (i = 0; i < entries; i++)
     {
-        console_putstr(console,root_dir[i].name);
-        console_putchar(console,'\n');
+        if(root_dir[i].name[0]!=0xe5)
+        {
+            strncpy(s2,root_dir[i].name,8);
+            sprintf(s,"%s.%s\t%dKB\t",s2,root_dir[i].ext,root_dir[i].size/1024);
+            console_putstr(console,s);
+            
+            console_putchar(console,'\n');
+            total++;
+            total_kb+=root_dir[i].size/1024;
+        }
     }
+    if(task->langmode==0)
+    {
+        sprintf(s,"\n\t%d file(s) total\n\t%d KB total\n",total,total_kb);
+    }
+    else if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"\n\t一共有%d个文件\n\t总共%dKB\n",total,total_kb);
+    }
+    console_putstr(console,s);
     free(root_dir);
+    console_putchar(console,'\n');
+}
+
+void cmd_langmode(console_t *console,int lmode)
+{
+    task_t *task=task_now();
+    struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+    if(lmode!=0 && lmode!=1 && lmode!=2)
+    {
+        if(task->langmode==0)
+        {
+            console_putstr(console,"Language Mode Error.\n");
+        }
+        else if(task->langmode==1 || task->langmode==2)
+        {
+            console_putstr(console,"语言模式出错.\n");
+        }
+    }
+    else
+    {
+        if(lmode==1 && binfo->hzk16==NULL)
+        {
+            console_putstr(console,"HZK16.bin not loaded!Please check if this file exists or check neumann.ini.\n");
+        }
+        else if(lmode==2 && binfo->hzk16f==NULL)
+        {
+            console_putstr(console,"HZK16F.bin not loaded!Please check if this file exists or check neumann.ini\n");
+        }
+        else
+        {
+            task->langmode=lmode;
+        }
+    }
+
+    if(task->langmode==0)
+    {
+        console_putstr(console,"Now you are in ASCII English mode.\n");
+    }
+    else if(task->langmode==1)
+    {
+        console_putstr(console,"你目前处于GB2312简体中文模式下.\n");
+    }
+    else if(task->langmode==2)
+    {
+        console_putstr(console,"你目前处于GB2312繁体中文模式下.\n");
+    }
 }

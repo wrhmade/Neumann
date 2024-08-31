@@ -1,4 +1,5 @@
-GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall
+GCC	=gcc -m32 -std=c99 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312
+AR	=ar
 LD	=ld -nostdlib -m $(LD_FORMAT)
 OBJCOPY	=objcopy
 NASM	=nasm

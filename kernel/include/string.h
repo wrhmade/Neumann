@@ -18,4 +18,6 @@ uint32_t strlen(const char *str);
 int8_t strcmp(const char *a, const char *b);
 char *strchr(const char *str, const uint8_t ch);
 void bzero(void *dest, uint32_t len);
+char* strstr(const char* str1, const char* str2);
+char* strncpy(char* dest, const char* src, size_t n);
 #endif
