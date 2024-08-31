@@ -14,7 +14,6 @@ $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
 	$(FVDISK) res/test.txt -o $(IMAGENAME) -f 0
 	$(FVDISK) res/neumann.ini -o $(IMAGENAME) -f 0
 	$(FVDISK) res/desktop.jpg -o $(IMAGENAME) -f 0
-	$(FVDISK) res/night.bmp -o $(IMAGENAME) -f 0
 	$(FVDISK) apps/myapp/myapp.bin -o $(IMAGENAME) -f 0
 	$(FVDISK) boot/boot.bin -o $(IMAGENAME) -s 0
 
