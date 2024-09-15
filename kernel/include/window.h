@@ -18,9 +18,10 @@ typedef struct WINDOW
     task_t *task;
     int isconsole;
     console_t *console;
+    uint32_t close_btn;
 }window_t;
 
-window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv);
+window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv,uint32_t close_btn);
 void window_init(window_t *window,sheet_t *sheet,uint32_t xsize,uint32_t ysize,char *title);
 void draw_window(window_t *window);
 void show_window(window_t *window);

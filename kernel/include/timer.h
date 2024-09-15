@@ -8,4 +8,6 @@ Copyright W24 Studio
 #define TIMER_H
 #include <stdint.h>
 void init_timer(uint32_t freq);
+void sleep(uint32_t timer);
+void clock_sleep(uint32_t timer);
 #endif

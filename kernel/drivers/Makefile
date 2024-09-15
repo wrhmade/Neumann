@@ -9,6 +9,8 @@ default:
 	$(MAKE) -C buzzer
 	$(MAKE) -C hd
 	$(MAKE) -C cmos
+	$(MAKE) -C com
+	$(MAKE) -C lpt
 
 clean:
 	$(MAKE) -C io clean
@@ -18,3 +20,5 @@ clean:
 	$(MAKE) -C buzzer clean
 	$(MAKE) -C hd clean
 	$(MAKE) -C cmos clean
+	$(MAKE) -C com clean
+	$(MAKE) -C lpt clean

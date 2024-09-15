@@ -19,11 +19,13 @@ Copyright W24 Studio
 
 char s[60];
 extern taskctl_t *taskctl;
+static int tick=0;
 
 static void timer_callback(registers_t *regs)
 {
     task_switch();
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    tick++;
     // sprintf(s,"Running:%d",taskctl->running);
     // boxfill(binfo->vram,binfo->scrnx,0,0,8*strlen(s)-1,15,0xFFFFFF);
     // putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFF0000,s);
@@ -52,4 +54,20 @@ void init_timer(uint32_t freq)
 
     io_out8(0x40, l);
     io_out8(0x40, h); // 分两次发出
+}
+
+/* 使当前进程休眠指定的时间 */
+void sleep(uint32_t timer)
+{
+	clock_sleep(timer);
+}
+
+/* 实现sleep函数的内部逻辑 */
+void clock_sleep(uint32_t timer)
+{
+	uint32_t sleep = tick + timer;
+	while(1){
+		
+		if(tick >= sleep) break;
+	}
 }

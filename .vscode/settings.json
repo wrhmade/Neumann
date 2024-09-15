@@ -22,7 +22,12 @@
         "functional": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "regctl.h": "c",
+        "lpt.h": "c",
+        "io.h": "c",
+        "graphic.h": "c",
+        "elf.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

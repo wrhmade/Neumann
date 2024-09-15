@@ -11,25 +11,25 @@ default:
 	$(MAKE) fvdisk
 
 ftcopy:ftcopy.c
-	$(GCC) ftcopy.c -o ftcopy
+	$(GCC2) ftcopy.c -o ftcopy
 
 ftformat:ftformat.c
-	$(GCC) ftformat.c -o ftformat
+	$(GCC2) ftformat.c -o ftformat
 
 ftimgcreate:ftimgcreate.c
-	$(GCC) ftimgcreate.c -o ftimgcreate
+	$(GCC2) ftimgcreate.c -o ftimgcreate
 
 ftls:ftls.c
-	$(GCC) ftls.c -o ftls
+	$(GCC2) ftls.c -o ftls
 
 ftrm:ftrm.c
-	$(GCC) ftrm.c -o ftrm
+	$(GCC2) ftrm.c -o ftrm
 
 hexview:hexview.c
-	$(GCC) hexview.c -o hexview
+	$(GCC2) hexview.c -o hexview
 
 fvdisk:fvdisk.c
-	$(GCC) fvdisk.c -o fvdisk
+	$(GCC2) fvdisk.c -o fvdisk
 
 clean:
 	$(DEL) ftcopy

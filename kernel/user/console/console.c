@@ -20,6 +20,7 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <macro.h>
 #include <ini.h>
+#include <lpt.h>
 void console_main();
 
 
@@ -30,11 +31,11 @@ console_t *open_console(void)
     task_t *task=task_now();
     if(task->langmode==0)
     {
-        window=create_window("Console",80*8+2,25*16+18+1,-1);
+        window=create_window("Console",80*8+2,25*16+18+1,-1,1);
     }
     else if(task->langmode==1 || task->langmode==2)
     {
-        window=create_window("控制台",80*8+2,25*16+18+1,-1);
+        window=create_window("控制台",80*8+2,25*16+18+1,-1,1);
     }
     show_window(window);
     move_window(window,120,120);
@@ -296,6 +297,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_count(console);
     }
+    else if(strncmp(cmdline,"print ",6)==0)
+    {
+        cmd_print(console,cmdline+6);
+    }
     else if(strcmp(cmdline,"dir")==0)
     {
         cmd_dir(console);
@@ -502,4 +507,76 @@ void cmd_langmode(console_t *console,int lmode)
     {
         console_putstr(console,"你目前处于GB2312繁体中文模式下.\n");
     }
+}
+
+void cmd_print(console_t *console,char *filename)
+{
+    fileinfo_t finfo;
+    task_t *task=task_now();
+    char s[40];
+    if(fat16_open_file(&finfo,filename)!=0)
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            console_putstr(console,"找不到文件.\n");
+        }
+        else
+        {
+            console_putstr(console,"No such file.\n");
+        }
+        return;
+    }
+    char *buf=(char *)malloc(sizeof(char)*(finfo.size+5));
+
+    // if(task->langmode==1 || task->langmode==2)
+    // {
+    //     console_putstr(console,"请在打印机放纸,并按回车键.......");
+    // }
+    // else
+    // {
+    //     console_putstr(console,"Please place paper on the printer and press Enter...");
+    // }
+    // console_input(console,10);
+    fat16_read_file(&finfo,buf);
+
+    if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"正在打印.......\n");
+    }
+    else
+    {
+        console_putstr(console,"Printing...\n");
+    }
+    int i=0;
+    window_t *window;
+    if(task->langmode==1 || task->langmode==2)
+    {
+        window=create_window("打印",102,34,0,0);
+    }
+    else
+    {
+        window=create_window("Print",102,34,0,0);
+    }
+    
+    while(buf[i])
+    {
+        lpt_put(buf[i]);
+        boxfill(window->sheet->buf,window->xsize,1,18,window->xsize-2,window->ysize-2,0xC6C6C6);
+        boxfill(window->sheet->buf,window->xsize,1,18,(int)((i+1)*100/strlen(buf))+1,window->ysize-2,0xFF0000);
+        sprintf(s,"%d%%",(int)((i+1)*100/strlen(buf)));
+        putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-strlen(s)*8/2,18,0x000000,s);
+        sheet_refresh(window->sheet,0,0,window->xsize-1,window->ysize-1);
+        i++;
+    }
+    if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"完成\n");
+    }
+    else
+    {
+        console_putstr(console,"Done\n");
+    }
+    close_window(window);
+    free(buf);
+
 }

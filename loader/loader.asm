@@ -369,7 +369,7 @@ wSectorNo           dw 0              ; 用于保存当前扇区数
 bOdd                db 0              ; 这个其实是下一节的东西，不过先放在这也不是不行
  
 KernelFileName      db "KERNEL  BIN", 0 ; Kernel的文件名
- 
+
 MessageLength       equ 9 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
 BootMessage:        db "Loading  " ; 此处定义之后就可以删除原先定义的BootMessage字符串了
 Message1            db "Ready.   " ; 显示已准备好

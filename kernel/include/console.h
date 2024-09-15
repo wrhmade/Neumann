@@ -30,5 +30,5 @@ void cmd_mem(console_t *console);
 void cmd_count(console_t *console);
 void cmd_dir(console_t *console);
 void cmd_langmode(console_t *console,int lmode);
-void cmd_lspci(console_t *console);
+void cmd_print(console_t *console,char *filename);
 #endif

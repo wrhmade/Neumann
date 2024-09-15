@@ -48,7 +48,7 @@ make full
 > make full -j8
 > ```
 
-如果提示没有报错，请看看目录下是否出现boothd.img</kbd><kbd>boothd.vhd</kbd><kbd>boothd.vmdk</kbd>这三个文件。如果说出现了，那么恭喜你，你成功地编译了这个系统。
+如果提示没有报错，请看看目录下是否出现<kbd>boothd.img</kbd>这个文件。如果说出现了，那么恭喜你，你成功地编译了这个系统。
 
 你可以输入以下命令来运行：
 
@@ -69,6 +69,26 @@ make run
 > ```bash
 > make fastbuild
 > ```
+
+
+
+### 生成其它格式映像文件
+
+vhd格式：
+
+```bash
+make to_vhd
+```
+
+vmdk格式：
+
+```bash
+make to_vmdk
+```
+
+> [!IMPORTANT]
+>
+> 你必须编译<kbd>boothd.img</kbd>这个文件后，才能运行上述两个命令
 
 
 

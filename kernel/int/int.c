@@ -11,6 +11,7 @@ Copyright W24 Studio
 #include <stdio.h>
 #include <macro.h>
 #include <fault.h>
+#include <com.h>
 
 static isr_t interrupt_handlers[256];
 
@@ -28,6 +29,8 @@ void isr_handler(registers_t regs)
 void irq_handler(registers_t regs)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO; 
+    
+
 
     if (regs.int_no >= 0x28) io_out8(0xA0, 0x20); // 给从片发EOI
     io_out8(0x20, 0x20); // 给主片发EOI

@@ -59,6 +59,9 @@ static int column;
 
 static void in_process(uint32_t key)
 {
+    char s[50];
+    sprintf(s,"Keyboard Input:%c\n",key);
+    serial_putstr(s);
     if (!(key & FLAG_EXT)) {
         fifo_put(&decoded_key, key & 0xFF);
     } else {

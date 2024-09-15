@@ -19,4 +19,6 @@ void putstr_ascii(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32
 void putstr_ascii_lmode(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, unsigned char *s,int langmode);
 void putfont_gb2312(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t c,char *font1,char *font2);
 void putblock(uint32_t *vram, int vxsize, int pxsize,int pysize, int px0, int py0, uint32_t *buf, int bxsize);
+
+
 #endif

@@ -8,6 +8,7 @@ Copyright W24 Studio
 #include <io.h>
 #include <stdint.h>
 #include <mm.h>
+#include <com.h>
 
 static int hd_size_cache = 0;
 

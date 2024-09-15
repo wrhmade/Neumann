@@ -7,3 +7,4 @@ main:
     mov eax,0
     mov ebx,'A'
     int 80h
+    ret

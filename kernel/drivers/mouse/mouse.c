@@ -34,6 +34,9 @@ void ps2mouse_handler(registers_t regs)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     mouse_data0=io_in8(PORT_KEYDAT);
+    char s[50];
+    sprintf(s,"Mouse Input:0x%02X\n",mouse_data0);
+    serial_putstr(s);
     fifo_put(&mouse_fifo,mouse_data0);
 }
 

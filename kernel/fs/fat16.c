@@ -80,6 +80,7 @@ static int lfn2sfn(const char *lfn, char *sfn)
             break; // 跳出循环
         }
     }
+    
     if (lfn[0] == '.') return -1; // 首字符是.，不支持
     int len_name = last_dot, len_ext = len - 1 - last_dot; // 计算文件名与扩展名各自有多长
     if (len_name > 8) return -1; // 文件名长于8个字符，不支持

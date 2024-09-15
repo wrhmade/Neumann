@@ -17,7 +17,7 @@ Copyright W24 Studio
 #define WINDOW_CLOSE_BUTTON_BACKCOLOR 0xFF0000
 extern shtctl_t *global_shtctl;
 
-window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv)
+window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv,uint32_t close_btn)
 {
     window_t *window=(window_t *)malloc(sizeof(window_t));
     sheet_t *sheet_window;
@@ -26,6 +26,7 @@ window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_i
 	buf_window=(uint32_t *)malloc(sizeof(uint32_t)*xsize*ysize);
 	sheet_setbuf(sheet_window,buf_window,xsize,ysize,-1);
     window_init(window,sheet_window,xsize,ysize,title);
+    window->close_btn=close_btn;
     draw_window(window);
 	sheet_updown(window->sheet,1);
 	sheet_slide(window->sheet,100,100);
@@ -92,7 +93,7 @@ void draw_window(window_t *window)
             }
         }
     }
-    putblock(window->sheet->buf,window->xsize,16,16,window->xsize-17,2,btn_close,16);
+    if(window->close_btn)putblock(window->sheet->buf,window->xsize,16,16,window->xsize-17,2,btn_close,16);
     sheet_refresh(window->sheet,0,0,window->xsize,window->ysize);
 }
 

@@ -25,6 +25,7 @@ Copyright W24 Studio
 #include <fat16.h>
 #include <ini.h>
 #include <string.h>
+#include <com.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -36,7 +37,7 @@ int process=0;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 10
+#define PROCESS_SUM 11
 
 
 void process_forward(void)
@@ -149,6 +150,9 @@ void krnlc_main(void)
 	process_forward();
 
 	init_timer(100);
+	process_forward();
+
+	init_com();
 	process_forward();
 
 
@@ -304,7 +308,7 @@ void krnlc_main(void)
     		                        mmx2 = sht->vx0;
     		                        new_wy = sht->vy0;
     		                    }
-								if(sht->bxsize-17 <= x && x<= sht->bxsize-1 && 1<=y && y<=17)
+								if(sht->bxsize-17 <= x && x<= sht->bxsize-1 && 1<=y && y<=17 && sht->window->close_btn)
 								{
 									if(sht->window->isconsole)
 									{
