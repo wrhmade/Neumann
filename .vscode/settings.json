@@ -27,7 +27,8 @@
         "lpt.h": "c",
         "io.h": "c",
         "graphic.h": "c",
-        "elf.h": "c"
+        "elf.h": "c",
+        "page.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

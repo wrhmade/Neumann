@@ -8,6 +8,7 @@ $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
 	$(FTIMGCREATE) $(IMAGENAME) -t hd -size 80
 	$(FTFORMAT) $(IMAGENAME) -t hd -f fat16
 	$(FVDISK) loader/loader.bin -o $(IMAGENAME) -f 0
+	$(FVDISK) preload/preload.bin -o $(IMAGENAME) -f 0
 	$(FVDISK) kernel/kernel.bin -o $(IMAGENAME) -f 0
 	$(FVDISK) kernel/font/HZK16.bin -o $(IMAGENAME) -f 0
 	$(FVDISK) kernel/font/HZK16F.bin -o $(IMAGENAME) -f 0
@@ -26,6 +27,7 @@ full:
 	$(MAKE) -C kernel
 	$(MAKE) -C apps
 	$(MAKE) -C tools
+	$(MAKE) -C preload
 	$(MAKE) $(IMAGENAME)
 
 clean_full:
@@ -37,6 +39,7 @@ clean_full:
 	$(MAKE) -C kernel clean
 	$(MAKE) -C tools clean
 	$(MAKE) -C apps clean
+	$(MAKE) -C preload clean
 
 fastbuild:
 	$(MAKE) clean_full

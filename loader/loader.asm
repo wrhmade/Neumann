@@ -295,7 +295,7 @@ set_vbe:
 save_vbe_info:
     mov ax,0x00
     mov gs,ax
-    mov byte [vmode],COLOR_BITS ;
+    mov word[gs:vmode],COLOR_BITS ;
     mov ax,[es:di+0x12]
     mov word[gs:scrnx],ax  ; x分辨率
     mov ax,[es:di+0x14]
@@ -368,7 +368,7 @@ wRootDirSizeForLoop dw RootDirSectors ; 查找Kernel的循环中将会用到
 wSectorNo           dw 0              ; 用于保存当前扇区数
 bOdd                db 0              ; 这个其实是下一节的东西，不过先放在这也不是不行
  
-KernelFileName      db "KERNEL  BIN", 0 ; Kernel的文件名
+KernelFileName      db "PRELOAD BIN", 0 ; Kernel的文件名
 
 MessageLength       equ 9 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
 BootMessage:        db "Loading  " ; 此处定义之后就可以删除原先定义的BootMessage字符串了

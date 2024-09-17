@@ -9,7 +9,6 @@ Copyright W24 Studio
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <com.h>
 
 #define EFLAGS_AC_BIT		0x00040000
 #define CR0_CACHE_DISABLE	0x60000000
@@ -66,7 +65,6 @@ static void memman_init(memman_t *man)
 static uint32_t memman_alloc(memman_t *man, uint32_t size)
 {
     uint32_t i, a;
-    char s[40];
     for (i = 0; man->frees; i++) {
         if (man->free[i].size >= size) { // 找到了足够的内存
             a = man->free[i].addr;
@@ -78,8 +76,6 @@ static uint32_t memman_alloc(memman_t *man, uint32_t size)
                     man->free[i] = man->free[i + 1]; // 各free前移
                 }
             }
-            sprintf(s,"Memory Allocated,address:0x%p\n",a);
-            serial_putstr(s);
             return a; // 返回
         }
     }
@@ -89,7 +85,6 @@ static uint32_t memman_alloc(memman_t *man, uint32_t size)
 static int memman_free(memman_t *man, uint32_t addr, uint32_t size)
 {
     int i, j;
-    char s[40];
     for (i = 0; i < man->frees; i++) {
         // 各free按addr升序排列
         if (man->free[i].addr > addr) break; // 找到位置了！
@@ -110,8 +105,6 @@ static int memman_free(memman_t *man, uint32_t addr, uint32_t size)
                     }
                 }
             }
-            sprintf(s,"Memory Freed,address:0x%p\n",addr);
-            serial_putstr(s);
             return 0; // free完毕
         }
     }
@@ -186,8 +179,7 @@ void free(void *p)
 uint32_t init_mem(void)
 /*初始化内存管理*/
 {
-	uint32_t memtotal=memtest(0x00400000, 0xbfffffff);
-
+	uint32_t memtotal=memtotal=memtest(0x00400000, 0xbfffffff);
 
 	memman_t *man=(memman_t *)MEMMAN_ADDR;
 	memman_init(man);

@@ -4,7 +4,6 @@
 
 [BITS 32]
 global memtest_sub
-global set_cr3
 
 memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
 		push	edi						; 乮ebx, esi, edi 傕巊偄偨偄偺偱乯

@@ -21,6 +21,7 @@ Copyright W24 Studio
 #include <macro.h>
 #include <ini.h>
 #include <lpt.h>
+#include <maths.h>
 void console_main();
 
 
@@ -297,6 +298,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_count(console);
     }
+    else if(strcmp(cmdline,"bootinfo")==0)
+    {
+        cmd_bootinfo(console);
+    }
     else if(strncmp(cmdline,"print ",6)==0)
     {
         cmd_print(console,cmdline+6);
@@ -528,15 +533,15 @@ void cmd_print(console_t *console,char *filename)
     }
     char *buf=(char *)malloc(sizeof(char)*(finfo.size+5));
 
-    // if(task->langmode==1 || task->langmode==2)
-    // {
-    //     console_putstr(console,"请在打印机放纸,并按回车键.......");
-    // }
-    // else
-    // {
-    //     console_putstr(console,"Please place paper on the printer and press Enter...");
-    // }
-    // console_input(console,10);
+    if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"请在打印机放纸,并按回车键.......");
+    }
+    else
+    {
+        console_putstr(console,"Please place paper on the printer and press Enter...");
+    }
+    console_input(console,10);
     fat16_read_file(&finfo,buf);
 
     if(task->langmode==1 || task->langmode==2)
@@ -579,4 +584,37 @@ void cmd_print(console_t *console,char *filename)
     close_window(window);
     free(buf);
 
+}
+
+void cmd_bootinfo(console_t *console)
+{
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    task_t *task=task_now();
+    char s[60];
+
+    if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"启动信息:\n");
+        sprintf(s,"分辨率:%dx%d\n",binfo->scrnx,binfo->scrny);
+        console_putstr(console,s);
+        sprintf(s,"宽高比:%d:%d\n",binfo->scrnx/(get_GCD(binfo->scrnx,binfo->scrny)),binfo->scrny/(get_GCD(binfo->scrnx,binfo->scrny)));
+        console_putstr(console,s);
+        sprintf(s,"色深:%d位\n",binfo->vmode);
+        console_putstr(console,s);
+        sprintf(s,"显存起始地址:%8p\n",binfo->vram);
+        console_putstr(console,s);
+    }
+    else
+    {
+        console_putstr(console,"Boot Infomation:\n");
+        sprintf(s,"Display resolution:%dx%d\n",binfo->scrnx,binfo->scrny);
+        console_putstr(console,s);
+        sprintf(s,"Aspect ratio:%d:%d\n",binfo->scrnx/(get_GCD(binfo->scrnx,binfo->scrny)),binfo->scrny/(get_GCD(binfo->scrnx,binfo->scrny)));
+        console_putstr(console,s);
+        sprintf(s,"Color Depth:%d位\n",binfo->vmode);
+        console_putstr(console,s);
+        sprintf(s,"Starting address of graphics memory:%8p\n",binfo->vram);
+        console_putstr(console,s);
+    }
+    
 }

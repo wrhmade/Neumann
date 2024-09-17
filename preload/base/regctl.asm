@@ -29,8 +29,3 @@ store_cr0:
 load_tr:
     ltr [esp + 4]
     ret
-
-set_cr3:
-	mov eax,[esp+4]
-	mov cr3,eax
-	ret
