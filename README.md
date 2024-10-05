@@ -17,7 +17,13 @@ gcc nasm make mtools qemu qemu-system-x86
 如果没有，执行以下命令
 
 ```bash
-sudo apt install gcc nasm make mtools qemu qemu-system-x86 
+sudo apt install gcc nasm make mtools qemu qemu-system-x86 gcc-multilib
+```
+
+其中，gcc-multilib是修复以下报错的：
+
+```
+ fatal error: bits/libc-header-start.h: No such file or directory
 ```
 
 接着，切换到你的代码目录
