@@ -14,6 +14,8 @@ Copyright W24 Studio
 #include <graphic.h>
 #include <fifo.h>
 
+void log(char *s);
+
 #define PORT_KEYDAT		0x0060
 #define PORT_KEYCMD		0x0064
 #define KEYCMD_SENDTO_MOUSE		0xd4
@@ -30,6 +32,8 @@ extern uint32_t keymap[];
 
 fifo_t decoded_key;
 uint32_t dkey_buf[32];
+
+int shift_pressing,ctrl_pressing;
 
 
 static int code_with_E0 = 0;
@@ -135,6 +139,31 @@ static void keyboard_read()
             keyrow = &keymap[(scancode & 0x7f) * MAP_COLS];
             column = 0;
 
+            
+
+            if(scancode==0x2a)
+            {
+                shift_pressing|=1;
+            }
+            if(scancode==0x36)
+            {
+                shift_pressing|=2;
+            }
+            if(scancode==0xaa)
+            {
+                shift_pressing&=~1;
+            }
+            if(scancode==0x1d)
+            {
+                ctrl_pressing=1;
+            }
+            if(scancode==0x9d)
+            {
+                ctrl_pressing=0;
+            }
+
+        
+
             int caps = shift_l || shift_r;
             if (caps_lock) {
                 if ((keyrow[0] >= 'a') && (keyrow[0] <= 'z')) caps = !caps;
@@ -147,6 +176,7 @@ static void keyboard_read()
                 code_with_E0 = 0;
             }
             key = keyrow[column];
+            
             switch (key) {
                 case SHIFT_L:
                     shift_l = make;
@@ -187,6 +217,7 @@ static void keyboard_read()
                 default:
                     break;
             }
+            
             if (make) {
                 int pad = 0;
 

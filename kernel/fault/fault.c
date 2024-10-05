@@ -52,7 +52,7 @@ void fault_process(registers_t regs)
     serial_putstr("\nSystem Halted.");
     for(;;)
     {
-        beep(900000);
+        
         asm_hlt();
     }
 }

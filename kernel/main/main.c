@@ -26,14 +26,21 @@ Copyright W24 Studio
 #include <ini.h>
 #include <string.h>
 #include <com.h>
+#include <message.h>
+#include <ime.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
+extern ime_status_t *status;
+extern fifo_t key_fifo;
 mdec_t mdec;
 
 shtctl_t *global_shtctl;
 sheet_t *global_sht_back;
+int global_mousebtn;
 int process=0;
+int mouse_x,mouse_y;
+sheet_t *keywin;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
@@ -88,12 +95,31 @@ void taskb_main(void)
 	}
 }
 
+void log(char *s)
+{
+	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+	if(DEBUGMODE)
+	{
+		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,16,PROCESS_BACKCOLOR);
+		putstr_ascii_lmode(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,s,0);
+	}
+}
+
+void log_cn(char *s)
+{
+	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+	if(DEBUGMODE)
+	{
+		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,16,PROCESS_BACKCOLOR);
+		putstr_ascii_lmode(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,s,1);
+	}
+}
 
 void krnlc_main(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	int i,j;
-	int mouse_x,mouse_y,mmx=-1,mmy=-1,mmx2=0,x,y;
+	int mmx=-1,mmy=-1,mmx2=0,x,y;
 	int new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0;
 	uint32_t memtotal;
 	process=0;
@@ -104,7 +130,6 @@ void krnlc_main(void)
 	sheet_t *sht_mouse;
 	uint32_t *buf_mouse;
 	sheet_t *sht;
-	sheet_t *keywin;
 	console_t *console;
 	
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
@@ -118,23 +143,26 @@ void krnlc_main(void)
 	// boxfill(binfo->vram,binfo->scrnx,40,40,320,320,0x00FF00);
 	// boxfill(binfo->vram,binfo->scrnx,60,60,340,340,0x0000FF);
 	
+	log("Initializing GDT and IDT...");
 	init_gdtidt();process_forward();
 
-
+	log("Starting Interrupt...");
 	asm_sti();process_forward();
 
-
+	log("Initializing PS/2 Keyboard...");
 	init_keyboard();process_forward();
 
-
+	log("Initializing PS/2 Mouse...");
 	init_ps2mouse();process_forward();
 
+	log("Initializing Memory...");
 	memtotal=init_mem();process_forward();
-	sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
+	//sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
 	binfo->memtotal=memtotal;
-	putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
+	//putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
 
+	log("Initializing Sheet...");
 	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
 	global_shtctl=shtctl;
 	process_forward();
@@ -146,17 +174,20 @@ void krnlc_main(void)
 
 	process_forward();
 
+	log("Initializing Multi Task...");
 	task_t *task_a=task_init();
 	process_forward();
 
+	log("Initializing Timer...");
 	init_timer(100);
 	process_forward();
 
+	log("Initializing Serial Port...");
 	init_com();
 	process_forward();
 
 
-
+	log("Loading Font...");
 	fileinfo_t *finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
 	char *value=(char *)malloc(sizeof(char)*10);
 	if(read_ini("neumann.ini","System","load_hzk16",value)==0)
@@ -224,6 +255,9 @@ void krnlc_main(void)
 	free(value);
 	process_forward();	
 
+	
+
+	log("Now Loading Desktop...");
 	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
 
 	
@@ -254,14 +288,25 @@ void krnlc_main(void)
 	uint8_t mouse_data,keyboard_data;
 
 	console=open_console();
-	keywin=console->window->sheet;
+	
 
 
 	int _free,free;
 
 	task_t *task_b=create_kernel_task(taskb_main);
 	task_run(task_b);
+
+	ime_init();
+
+	keywin=console->window->sheet;
+
+
+	if(binfo->hzk16==NULL && binfo->hzk16f==NULL)warn_message("Chinese character library loading failed! Some Chinese characters may become garbled.","Chinese Font Library Not Loaded");
+	if(binfo->hzk16==NULL && binfo->hzk16f!=NULL)warn_message("简体中文字库(HZK16.BIN)无法加载！","字库未加载");
+	if(binfo->hzk16!=NULL && binfo->hzk16f==NULL)warn_message("繁体中文字库(HZK16F.BIN)无法加载！","字库未加载");
 	
+
+
 	for(;;)
 	{
 
@@ -289,6 +334,7 @@ void krnlc_main(void)
 				}
 				new_mx=mouse_x;
 				new_my=mouse_y;
+				global_mousebtn=mdec.btn;
 				if((mdec.btn & 0x01)!=0)
 				{
 					if(mmx<0)
@@ -350,7 +396,14 @@ void krnlc_main(void)
 		if(fifo_status(&decoded_key)>0)
 		{
 			keyboard_data=fifo_get(&decoded_key);
-			fifo_put(&keywin->window->task->fifo,keyboard_data+256);
+			if(!status->enabled)
+			{
+				fifo_put(&keywin->window->task->fifo,keyboard_data+256);
+			}
+			else
+			{
+				fifo_put(&key_fifo,keyboard_data+256);
+			}
 		}
 		
 

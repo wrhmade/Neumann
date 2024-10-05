@@ -28,7 +28,14 @@
         "io.h": "c",
         "graphic.h": "c",
         "elf.h": "c",
-        "page.h": "c"
+        "page.h": "c",
+        "message.h": "c",
+        "sheet.h": "c",
+        "timer.h": "c",
+        "buzzer.h": "c",
+        "task.h": "c",
+        "ime.h": "c",
+        "keyboard.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

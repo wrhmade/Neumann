@@ -22,6 +22,8 @@ Copyright W24 Studio
 #include <ini.h>
 #include <lpt.h>
 #include <maths.h>
+#include <message.h>
+#include <ELF.h>
 void console_main();
 
 
@@ -302,6 +304,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_bootinfo(console);
     }
+    else if(strcmp(cmdline,"messtest")==0)
+    {
+        warn_message("This is a test message.","Warning");
+    }
     else if(strncmp(cmdline,"print ",6)==0)
     {
         cmd_print(console,cmdline+6);
@@ -313,6 +319,10 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strcmp(cmdline,"dzero")==0)
     {
         int a=114514/(1919810-1919810);
+    }
+    else if(strcmp(cmdline,"msdemo")==0)
+    {
+        start_msdemo();
     }
     else if(strncmp(cmdline,"echo ",5)==0)
     {
@@ -387,6 +397,10 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strncmp(cmdline,"langmode ",9)==0)
     {
         cmd_langmode(console,cmdline[9]-'0');
+    }
+    else if(strncmp(cmdline,"finfo ",6)==0)
+    {
+        cmd_finfo(console,cmdline+6);
     }
     else if(strcmp(cmdline,"")==0)
     {
@@ -575,11 +589,11 @@ void cmd_print(console_t *console,char *filename)
     }
     if(task->langmode==1 || task->langmode==2)
     {
-        console_putstr(console,"完成\n");
+        info_message("打印完成.","打印");
     }
     else
     {
-        console_putstr(console,"Done\n");
+        info_message("Printing completed.","Print");
     }
     close_window(window);
     free(buf);
@@ -617,4 +631,202 @@ void cmd_bootinfo(console_t *console)
         console_putstr(console,s);
     }
     
+}
+
+static char* get_ftype(char *ext1,int langmode)
+{
+    char *type=(char *)malloc(sizeof(char)*50);
+    char *ext=(char *)malloc(sizeof(char)*4);
+    strncpy(ext,ext1,3);
+    if(strcmp(ext,"BIN")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"二进制文件");
+        }
+        else
+        {
+            strcpy(type,"Binary File");
+        }
+    }
+    else if(strcmp(ext,"TXT")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"文本文件");
+        }
+        else
+        {
+            strcpy(type,"Text File");
+        }
+    }
+    else if(strcmp(ext,"INI")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"配置文件");
+        }
+        else
+        {
+            strcpy(type,"Configure File");
+        }
+    }
+    else if(strcmp(ext,"BMP")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"位图文件");
+        }
+        else
+        {
+            strcpy(type,"Bitmap File");
+        }
+    }
+    else if(strcmp(ext,"JPG")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"JEPG图片文件");
+        }
+        else
+        {
+            strcpy(type,"JPEG Image File");
+        }
+    }
+    else if(strcmp(ext,"PRG")==0)
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"Neumann旧版可执行文件");
+        }
+        else
+        {
+            strcpy(type,"Neumann Old Executable File");
+        }
+    }
+    else
+    {
+        if(langmode==1 || langmode==2)
+        {
+            strcpy(type,"未知");
+        }
+        else
+        {
+            strcpy(type,"Unknown");
+        }
+    }
+    free(ext);
+    return type;
+}
+
+static int isexecutable(fileinfo_t *finfo,char *result)
+{
+    char *buf=(char *)malloc(sizeof(char)*(finfo->size+5));
+    task_t *task=task_now();
+    fat16_read_file(finfo,buf);
+    if(elf32Validate((Elf32_Ehdr *)buf))
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            strcpy(result,"可执行文件(ELF格式)");
+        }
+        else
+        {
+            strcpy(result,"Executable File (ELF Format)");
+        }
+        return 1;
+    }
+    else if(finfo->size >= 36 && strncmp(buf + 4, "WPRG", 4) == 0 && buf[0] == 0x00)
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            strcpy(result,"可执行文件(Neumann旧版格式)");
+        }
+        else
+        {
+            strcpy(result,"Executable File (Neumann Old Format)");
+        }
+        return 1;    
+    }
+    else
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            strcpy(result,"不可执行文件");
+        }
+        else
+        {
+            strcpy(result,"Unexecutable File");
+        }
+        return 0;
+    }
+}
+
+void cmd_finfo(console_t *console,char *filename)
+{
+    fileinfo_t finfo;
+    task_t *task=task_now();
+    if(fat16_open_file(&finfo,filename)!=0)
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            console_putstr(console,"找不到这个文件\n");
+        }
+        else
+        {
+            console_putstr(console,"File not found.\n");
+        }
+        return;
+    }
+    char s[100];
+    if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"文件名:%s\n",finfo.name);
+    }
+    else
+    {
+        sprintf(s,"File Name:%s\n",finfo.name);
+    }
+    console_putstr(console,s);
+    if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"文件拓展名:%s\n",finfo.ext);
+    }
+    else
+    {
+        sprintf(s,"File Extension:%s\n",finfo.ext);
+    }
+    console_putstr(console,s);
+    if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"文件大小:%uKB\n",finfo.size/1024);
+    }
+    else
+    {
+        sprintf(s,"File Size:%uKB\n",finfo.size/1024);
+    }
+    console_putstr(console,s);
+    char *type=get_ftype(finfo.ext,task->langmode);
+    if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"文件类型:%s\n",type);
+    }
+    else
+    {
+        sprintf(s,"File Type:%s\n",type);
+    }
+    console_putstr(console,s);
+    free(type);
+    char *result=(char *)malloc(sizeof(char)*50);
+    isexecutable(&finfo,result);
+    if(task->langmode==1 || task->langmode==2)
+    {
+        sprintf(s,"可执行:%s\n",result);
+    }
+    else
+    {
+        sprintf(s,"Executable:%s\n",result);
+    }
+    console_putstr(console,s);
+    free(result);
 }

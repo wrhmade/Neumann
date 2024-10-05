@@ -121,3 +121,43 @@ char* strncpy(char* dest, const char* src, size_t n)
     }
     return dest;
 }
+
+char *strtok(char *str, const char *delim)
+{
+    static char *last;
+    char *start;
+ 
+    if (str)
+        start = str;
+    else {
+        start = last;
+        if (!start) {
+            return NULL;
+        }
+    }
+ 
+    // 跳过前导分隔符
+    while (*start && strchr(delim, *start)) {
+        start++;
+    }
+    if (!*start) {
+        return NULL;
+    }
+ 
+    // 找到下一个分隔符的位置
+    char *end = start + 1;
+    while (*end && !strchr(delim, *end)) {
+        end++;
+    }
+ 
+    // 将分隔符改为'\0'，形成一个新的字符串
+    if (*end) {
+        *end = '\0';
+    }
+ 
+    // 保存本次分解的位置，为下次调用准备
+    last = end;
+ 
+    return start;
+}
+ 

@@ -32,4 +32,5 @@ void cmd_dir(console_t *console);
 void cmd_langmode(console_t *console,int lmode);
 void cmd_print(console_t *console,char *filename);
 void cmd_bootinfo(console_t *console);
+void cmd_finfo(console_t *console,char *filename);
 #endif

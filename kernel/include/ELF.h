@@ -141,4 +141,7 @@ typedef struct {
   Elf32_Word p_align;
 } Elf32_Phdr;
 
+bool elf32Validate(Elf32_Ehdr *hdr);
+void load_segment(Elf32_Phdr *phdr, void *elf);
+uint32_t load_elf(Elf32_Ehdr *hdr);
 #endif
