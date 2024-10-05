@@ -19,6 +19,7 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <keyboard.h>
 
+
 extern int shift_pressing,ctrl_pressing;
 
 ime_status_t *status;
@@ -33,7 +34,8 @@ extern sheet_t *keywin;
 static int quotation_mark=0;
 static int double_quotation_mark=0;
 
-int choosing=0,select_start;
+int double_byte;//全角模式
+int choosing=0,select_start,select_index;
 
 chinese_t *py_result;
 
@@ -47,29 +49,6 @@ int mb_lines;
 void log(char *s);
 void log_cn(char *s);
 
-char* getInputWord(char *input)
-{
-  char substr[32], *p, lastc=input[strlen(input)-1];
-  int i=0, j=1, k=0, l=0;
-  if ('0' <= lastc && lastc <= '9') { input[strlen(input)-1] = '\0'; k = lastc - '0';}
-  if (k < 1 || k > 5) { k = 1; } //这里只能有5个候选位
-  sprintf(substr, "\n%s ", input);
-
-  char *output = (char *)malloc(sizeof(char)*32);
-  p = strstr(status->mb, substr);
-  if (p > 0) {
-    p += strlen(substr);
-    for (i=0; i<25 && *p!='\n'; i++) {
-      if(*p == ' ') { j++; if (j > k) { break; } else { p++; continue; } }
-      if(j == k) {
-        output[l++] = *p;
-      }
-      p++;
-    }
-    output[l] = '\0';
-  } else { strcpy(output, input); }
-  return output;
-}
 
 static void refresh()
 {
@@ -84,10 +63,22 @@ static void refresh()
         putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0x000000,"中");
     }
     task->langbyte=0;
-    putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0x000000,input);
-    if(choosing)boxfill(ime_shtbuf,ime_sheet->bxsize,24+input_index*8,13,24+input_index*8+7,15,0x000000);
+    if(status->inputmode==1)
+    {
+        if(double_byte)
+        {
+            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0x000000,"全");
+        }
+        else
+        {
+            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0x000000,"半");
+        }
+    }
+    task->langbyte=0;
+    putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24+16,0,0x000000,input);
+    if(choosing)boxfill(ime_shtbuf,ime_sheet->bxsize,24+16+input_index*8,13,24+16+input_index*8+7,15,0x000000);
 
-    int x=8*7+16+8,i;
+    int x=8*7+16+32,i;
     int number=1;
     char chr[3];
 
@@ -102,7 +93,14 @@ static void refresh()
             chr[0]=py_result[i+select_start].byte1;
             chr[1]=py_result[i+select_start].byte2;
             chr[2]=0;
-            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0x000000,chr);
+            if(select_index==i)
+            {
+                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0xFF0000,chr);
+            }
+            else
+            {
+                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0x000000,chr);
+            }
             strcpy(chooses[i],chr);
             //log_cn(chr);
             x+=24;
@@ -165,6 +163,7 @@ void ime_input(char c)
         }
         input_index=0;
         choosing=0;
+        select_index=0;
     }
     else if(c=='\b' && input_index>0)
     {
@@ -174,13 +173,51 @@ void ime_input(char c)
     else if(c=='=')
     {
         select_start+=5;
+        select_index=0;
     }
     else if(c=='-')
     {
         if(select_start>0)
         {
             select_start-=5;
+            select_index=0;
         }
+    }
+    else if(c==']' && choosing)
+    {
+        select_index++;
+        if(select_index==5)
+        {
+            select_start+=5;
+            select_index=0;
+        }
+    }
+    else if(c=='[' && choosing)
+    {
+        if(select_index==0)
+        {
+            if(select_start>0)
+            {
+                select_index=4;
+                select_start-=5;
+            }
+        }
+        else
+        {
+            select_index--;
+        }
+    }
+    else if(c==' ' && choosing)
+    {
+        int i;
+        ime_put(chooses[select_index]);
+        for(i=0;i<7;i++)
+        {
+            input[i]=0;
+        }
+        input_index=0;
+        choosing=0;
+        select_index=0;
     }
     else if(c>=0x20 && c<=0xFF && input_index<=5)
     {
@@ -196,6 +233,7 @@ void ime_input(char c)
             }
             input_index=0;
             choosing=0;
+            select_index=0;
         }
         else if(c=='0' || (c>='6' && c<='9'))
         {
@@ -227,12 +265,28 @@ void ime_main()
     refresh();
     for(;;)
     {
-        if(ctrl_pressing && shift_pressing)
+        if(ctrl_pressing)
         {
-            while(ctrl_pressing && shift_pressing);
-            status->inputmode=!status->inputmode;
-            refresh();
-            continue;
+            if(shift_pressing)
+            {
+                while(ctrl_pressing && shift_pressing);
+                status->inputmode=!status->inputmode;
+                for(i=0;i<7;i++)
+                {
+                    input[i]=0;
+                }
+                for(i=0;i<390;i++)
+                {
+                    py_result[i].byte1=0;
+                    py_result[i].byte2=0;
+                }
+                choosing=0;
+                select_index=0;
+                select_start=0;
+                input_index=0;
+                refresh();
+                continue;
+            }
         }
         if(fifo_status(&key_fifo)>0)
         {
@@ -266,84 +320,207 @@ void ime_main()
             }
             else if(i-256==' ')//空格
             {
-                fifo_put(&keywin->window->task->fifo,i);
+                if(ctrl_pressing)
+                {
+                    while(ctrl_pressing);
+                    double_byte=!double_byte;
+                    refresh();
+                }
+                else
+                {
+                    if(choosing)
+                    {
+                        ime_input(' ');
+                    }
+                    else
+                    {
+                        fifo_put(&keywin->window->task->fifo,i);
+                    }
+                }
             }
             else if(i-256=='.')//句号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                }
             }
             else if(i-256==',')//逗号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xac+256);
-            }
-            else if(i-256==',')//逗号
-            {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xac+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xac+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,','+256);
+                }
             }
             else if(i-256==';')//分号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xbb+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xbb+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,';'+256);
+                }
             }
             else if(i-256=='\\')//顿号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xa2+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xa2+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'\\'+256);
+                }
             }
             else if(i-256=='_')//破折号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xaa+256);
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xaa+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xaa+256);
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xaa+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'_'+256);
+                }
             }
             else if(i-256=='!')//感叹号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'!'+256);
+                }
             }
             else if(i-256=='?')//问号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xbf+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xbf+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'?'+256);
+                }
             }
             else if(i-256==':')//冒号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xba+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xba+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,':'+256);
+                }
             }
             else if(i-256=='<')//左书名号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xb6+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xb6+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'<'+256);
+                }
             }
             else if(i-256=='>')//右书名号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xb7+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xb7+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'>'+256);
+                }
             }
             else if(i-256=='(')//左括号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xa8+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xa8+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'('+256);
+                }
             }
             else if(i-256==')')//右括号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xa9+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xa9+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,')'+256);
+                }
             }
             else if(i-256=='[')//左中括号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,(0xbe)+256);
+                if(choosing)
+                {
+                    ime_input('[');
+                }
+                else
+                {
+                    if(double_byte)
+                    {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,(0xbe)+256);
+                    }
+                    else
+                    {
+                        fifo_put(&keywin->window->task->fifo,'['+256);
+                    }
+                }
             }
             else if(i-256==']')//右中括号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xbf+256);
+                if(choosing)
+                {
+                    ime_input(']');
+                }
+                else
+                {
+                    if(double_byte)
+                    {
+                        fifo_put(&keywin->window->task->fifo,0xa1+256);
+                        fifo_put(&keywin->window->task->fifo,0xbf+256);
+                    }
+                    else
+                    {
+                        fifo_put(&keywin->window->task->fifo,']'+256);
+                    }
+                }
             }
             else if(i-256=='{')//左大括号
             {
@@ -366,8 +543,15 @@ void ime_main()
             }
             else if(i-256=='`')//点号
             {
-                fifo_put(&keywin->window->task->fifo,0xa1+256);
-                fifo_put(&keywin->window->task->fifo,0xa4+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa1+256);
+                    fifo_put(&keywin->window->task->fifo,0xa4+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'`'+256);
+                }
             }
             else if(i-256=='~')//波浪
             {
@@ -398,8 +582,15 @@ void ime_main()
             }
             else if(i-256=='$')//人民币符号
             {
-                fifo_put(&keywin->window->task->fifo,0xa3+256);
-                fifo_put(&keywin->window->task->fifo,0xa4+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,0xa3+256);
+                    fifo_put(&keywin->window->task->fifo,0xa4+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'$'+256);
+                }
             }
             else if(i-256=='%')//百分号
             {
@@ -407,12 +598,19 @@ void ime_main()
             }
             else if(i-256=='^')//省略号
             {
-                fifo_put(&keywin->window->task->fifo,'.'+256);
-                fifo_put(&keywin->window->task->fifo,'.'+256);
-                fifo_put(&keywin->window->task->fifo,'.'+256);
-                fifo_put(&keywin->window->task->fifo,'.'+256);
-                fifo_put(&keywin->window->task->fifo,'.'+256);
-                fifo_put(&keywin->window->task->fifo,'.'+256);
+                if(double_byte)
+                {
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                    fifo_put(&keywin->window->task->fifo,'.'+256);
+                }
+                else
+                {
+                    fifo_put(&keywin->window->task->fifo,'^'+256);
+                }
             }
             else if(i-256=='&')//and号
             {
@@ -424,31 +622,45 @@ void ime_main()
             }
             else if(i-256=='\'')//引号
             {
-                if(quotation_mark)
+                if(double_byte)
                 {
-                    fifo_put(&keywin->window->task->fifo,0xa1+256);
-                    fifo_put(&keywin->window->task->fifo,0xaf+256);
+                    if(quotation_mark)
+                    {
+                        fifo_put(&keywin->window->task->fifo,0xa1+256);
+                        fifo_put(&keywin->window->task->fifo,0xaf+256);
+                    }
+                    else
+                    {
+                        fifo_put(&keywin->window->task->fifo,0xa1+256);
+                        fifo_put(&keywin->window->task->fifo,(0xae)+256);
+                    }
+                    quotation_mark=!quotation_mark;
                 }
                 else
                 {
-                    fifo_put(&keywin->window->task->fifo,0xa1+256);
-                    fifo_put(&keywin->window->task->fifo,(0xae)+256);
+                    fifo_put(&keywin->window->task->fifo,'\''+256);
                 }
-                quotation_mark=!quotation_mark;
             }
             else if(i-256=='\"')//双引号
             {
-                if(double_quotation_mark)
+                if(double_byte)
                 {
-                    fifo_put(&keywin->window->task->fifo,0xa1+256);
-                    fifo_put(&keywin->window->task->fifo,0xb1+256);
+                    if(double_quotation_mark)
+                    {
+                        fifo_put(&keywin->window->task->fifo,0xa1+256);
+                        fifo_put(&keywin->window->task->fifo,0xb1+256);
+                    }
+                    else
+                    {
+                        fifo_put(&keywin->window->task->fifo,0xa1+256);
+                        fifo_put(&keywin->window->task->fifo,0xb0+256);
+                    }
+                    double_quotation_mark=!double_quotation_mark;
                 }
                 else
                 {
-                    fifo_put(&keywin->window->task->fifo,0xa1+256);
-                    fifo_put(&keywin->window->task->fifo,0xb0+256);
+                    fifo_put(&keywin->window->task->fifo,'\"'+256);
                 }
-                double_quotation_mark=!double_quotation_mark;
             }
             else if(i-256>='0' && i-256<='9' && !choosing)//数字
             {
@@ -506,8 +718,8 @@ void ime_init()
 
 
     ime_sheet=sheet_alloc(global_shtctl);
-    ime_shtbuf=(uint32_t *)malloc(sizeof(uint32_t)*208*16);
-    sheet_setbuf(ime_sheet,ime_shtbuf,208,16,-1);
+    ime_shtbuf=(uint32_t *)malloc(sizeof(uint32_t)*232*16);
+    sheet_setbuf(ime_sheet,ime_shtbuf,232,16,-1);
     boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0x808080);
 
 
@@ -515,7 +727,7 @@ void ime_init()
     
     sheet_updown(ime_sheet,-1);
     
-    
+    double_byte=0;
     
     sheet_refresh(ime_sheet,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1);
     sheet_slide(ime_sheet,binfo->scrnx-ime_sheet->bxsize,binfo->scrny-ime_sheet->bysize-100);

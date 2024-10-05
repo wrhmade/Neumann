@@ -15,3 +15,4 @@ clean:
 	-$(DEL) ini.obj
 	-$(DEL) maths.obj
 	-$(DEL) msdemo.obj
+	-$(DEL) ime.obj
