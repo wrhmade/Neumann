@@ -10,4 +10,5 @@ Copyright W24 Studio
 void init_timer(uint32_t freq);
 void sleep(uint32_t timer);
 void clock_sleep(uint32_t timer);
+int benchcpu(void);
 #endif

@@ -8,9 +8,16 @@ Copyright W24 Studio
 #define TASK_H
 #include <stdint.h>
 #include <fifo.h>
+#include <fpu.h>
 #define MAX_FILE_OPEN_PER_TASK 32
 typedef struct WINDOW window_t;
  
+typedef enum task_flag_t
+{
+    TASK_FPU_USED = 1,
+    TASK_FPU_ENABLED = 2,
+} task_flag_t;
+
 typedef struct TSS32 {
     uint32_t backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
     uint32_t eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
@@ -32,8 +39,10 @@ typedef struct TASK {
     uint32_t *fifobuf;
     exit_retval_t my_retval;
     int fd_table[MAX_FILE_OPEN_PER_TASK];
-    int langmode;//0为ASCII英文，1为GB2312中文
+    int langmode;//0为ASCII英文，1为GB2312简体中文，2为GB2312繁体中文
     unsigned char langbyte;
+
+    struct fpu_t *fpu;
 } task_t;
  
 #define MAX_TASKS 1000

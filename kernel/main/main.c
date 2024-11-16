@@ -28,6 +28,10 @@ Copyright W24 Studio
 #include <com.h>
 #include <message.h>
 #include <ime.h>
+#include <krnlcons.h>
+#include <fpu.h>
+#include <cpu.h>
+#include <pci.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -44,11 +48,14 @@ sheet_t *keywin;
 
 #define PROCESS_COLOR 0xFF0000
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 11
+#define PROCESS_SUM 13
 
 
 void process_forward(void)
 {
+	#if DEBUGMODE
+		return;
+	#endif
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	int _process=binfo->scrnx/2-320/2+60+process;
 	boxfill(binfo->vram,binfo->scrnx,_process,binfo->scrny/2-240/2+200,_process+(200/PROCESS_SUM),binfo->scrny/2-240/2+220,PROCESS_COLOR);
@@ -100,8 +107,8 @@ void log(char *s)
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	if(DEBUGMODE)
 	{
-		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,16,PROCESS_BACKCOLOR);
-		putstr_ascii_lmode(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,s,0);
+		krnlcons_putstr(s);
+		krnlcons_putchar('\n');
 	}
 }
 
@@ -117,6 +124,9 @@ void log_cn(char *s)
 
 void krnlc_main(void)
 {
+
+	
+
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	int i,j;
 	int mmx=-1,mmy=-1,mmx2=0,x,y;
@@ -132,37 +142,59 @@ void krnlc_main(void)
 	sheet_t *sht;
 	console_t *console;
 	
-	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
-	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
-	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2,binfo->scrny/2-240/2,binfo->scrnx/2+320/2,binfo->scrny/2+240/2,0xFFFFFF);
-	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+58,binfo->scrny/2-240/2+198,binfo->scrnx/2-320/2+262,binfo->scrny/2-240/2+222,0x000000);
-	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+60,binfo->scrny/2-240/2+200,binfo->scrnx/2-320/2+260,binfo->scrny/2-240/2+220,0xC6C6C6);
-	putstr_ascii_lmode(binfo->vram,binfo->scrnx,binfo->scrnx/2-16*8/2,binfo->scrny/2-240/2+180,0,"Starting Neumann",0);
+	#if !DEBUGMODE
+		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
+		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
+		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2,binfo->scrny/2-240/2,binfo->scrnx/2+320/2,binfo->scrny/2+240/2,0xFFFFFF);
+		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+58,binfo->scrny/2-240/2+198,binfo->scrnx/2-320/2+262,binfo->scrny/2-240/2+222,0x000000);
+		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+60,binfo->scrny/2-240/2+200,binfo->scrnx/2-320/2+260,binfo->scrny/2-240/2+220,0xC6C6C6);
+		putstr_ascii_lmode(binfo->vram,binfo->scrnx,binfo->scrnx/2-16*8/2,binfo->scrny/2-240/2+180,0,"Starting Neumann",0);
+	#else
+		krnlcons_display();
+	#endif
 
 	// boxfill(binfo->vram,binfo->scrnx,20,20,300,300,0xFF0000);
 	// boxfill(binfo->vram,binfo->scrnx,40,40,320,320,0x00FF00);
 	// boxfill(binfo->vram,binfo->scrnx,60,60,340,340,0x0000FF);
 	
+	log("Neumann Operating System\nVersion 0.8 [Beta 6]\nCopyright(c) 2023-2024 W24 Studio & 71GN Deep Space");
+	log("Now initializing system...");
+
 	log("Initializing GDT and IDT...");
 	init_gdtidt();process_forward();
 
-	log("Starting Interrupt...");
-	asm_sti();process_forward();
+	
+
+	log("Initializing Serial Port...");
+	init_com();
+	process_forward();
 
 	log("Initializing PS/2 Keyboard...");
 	init_keyboard();process_forward();
 
 	log("Initializing PS/2 Mouse...");
 	init_ps2mouse();process_forward();
+	
+	//for(;;);
 
 	log("Initializing Memory...");
 	memtotal=init_mem();process_forward();
+	
+	sprintf(s,"INFO:Memory Total:%dMB",memtotal/1024/1024);
+	log(s);
+
 	//sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
+	
+	
+	
 	binfo->memtotal=memtotal;
+	
 	//putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
+	
 
 	log("Initializing Sheet...");
+	
 	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
 	global_shtctl=shtctl;
 	process_forward();
@@ -174,6 +206,8 @@ void krnlc_main(void)
 
 	process_forward();
 
+	
+
 	log("Initializing Multi Task...");
 	task_t *task_a=task_init();
 	process_forward();
@@ -182,10 +216,22 @@ void krnlc_main(void)
 	init_timer(100);
 	process_forward();
 
-	log("Initializing Serial Port...");
-	init_com();
+	log("Starting Interrupt...");
+	asm_sti();process_forward();
+
+	log("Initializing FPU...");
+	if(!init_fpu())
+	{
+		log("Warning:FPU is not found!");
+	}
 	process_forward();
 
+	log("Initializing PCI...");
+	pci_init();
+	sprintf(s,"INFO:PCI devices total:%d",count_pci_device());
+	log(s);
+	process_forward();
+	
 
 	log("Loading Font...");
 	fileinfo_t *finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
@@ -256,10 +302,41 @@ void krnlc_main(void)
 	process_forward();	
 
 	
+	log("Benching CPU...");
+	uint32_t base_count=benchcpu();
+	sprintf(s,"Base Count is %08x",base_count);
+	log(s);
 
-	log("Now Loading Desktop...");
+	log("System is ready.");
+
+	
+	#if DEBUGMODE
+	krnlcons_putstr("\n\nComputer Info\n---------------------------------\nItem\t\t\tValue\n---------------------------------\n");
+	krnlcons_putstr("CPU\n");
+
+	cpu_version_t ver;
+	cpu_version(&ver);
+
+	krnlcons_putstr("\tBase Count\t");
+	sprintf(s,"%08x\n",base_count);
+	krnlcons_putstr(s);
+	
+	krnlcons_putstr("Memory\t\t\t");
+	sprintf(s,"%dMB\n",binfo->memtotal/1024/1024);
+	krnlcons_putstr(s);
+
+	
+
+	#endif
+
+	//for(;;);
+
+
+
+	log("\n\nNow Loading Desktop...");
+	
 	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
-
+	
 	
 	
 	
@@ -291,7 +368,7 @@ void krnlc_main(void)
 	
 
 
-	int _free,free;
+	int _free,__free;
 
 	task_t *task_b=create_kernel_task(taskb_main);
 	task_run(task_b);

@@ -8,6 +8,7 @@ Copyright W24 Studio
 #define MM_H
 #include <stdint.h>
 
+
 #define MEMMAN_ADDR 0x3c0000
 #define MEMMAN_FREES		4090
 

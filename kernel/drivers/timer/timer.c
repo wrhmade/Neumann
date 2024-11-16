@@ -33,6 +33,17 @@ static void timer_callback(registers_t *regs)
     // boxfill(binfo->vram,binfo->scrnx,0,16,8*strlen(s)-1,31,0xFFFFFF);
     // putstr_ascii(binfo->vram,binfo->scrnx,0,16,0xFF0000,s);
 }
+
+int benchcpu()
+{
+    int base_count=0;
+    uint32_t c=tick;
+    while(tick - c < 100) {
+            base_count++;
+    }
+    return base_count;
+}
+
 void init_timer(uint32_t freq)
 {
     io_out8(PIT_CTRL, 0x34);

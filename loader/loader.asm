@@ -302,7 +302,7 @@ save_vbe_info:
     mov word[gs:scrny],ax  ; y分辨率
     mov eax,[es:di+0x28]
     mov dword[gs:vram],eax
-    jmp LABLE_ENTER_PMODE
+    jmp LABLE_GET_ARDS
 scrn320:
     ; mov al,0x13 ;VGA显卡，320x200x8位彩色
     ; mov ah,0
@@ -344,10 +344,51 @@ vga:
     mov word[gs:scrny],ax  ; y分辨率
     mov eax,0x000a0000
     mov dword[gs:vram],eax
-    jmp LABLE_ENTER_PMODE
+    jmp LABLE_GET_ARDS
 stop16:
     hlt 
     jmp stop16
+
+LABLE_GET_ARDS:
+    ; 将 ebx 置为 0
+    xor ebx, ebx
+
+    ; es:di 结构体的缓存位置
+    mov ax, 0
+    mov es, ax
+    mov edi, 0x5000
+
+    mov edx, 0x534d4150; 固定签名
+
+.next:
+    ; 子功能号
+    mov eax, 0xe820
+    ; ards 结构的大小 (字节)
+    mov ecx, 20
+    ; 调用 0x15 系统调用
+    int 0x15
+
+    ; 如果 CF 置位，表示出错
+    jc .error
+
+    ; 将缓存指针指向下一个结构体
+    add di, cx
+
+    ; 将结构体数量加一
+    inc dword [ards_count]
+
+    cmp ebx, 0
+    jnz .next
+    jmp LABLE_ENTER_PMODE
+.error:
+    mov si,load_error
+    call putstr
+.loop:
+    hlt
+    jmp .loop
+    
+load_error db "Load Error!",0
+
 LABLE_ENTER_PMODE:
     lgdt [GdtPtr] ; 下面开始进入保护模式
  
@@ -522,6 +563,10 @@ cls:
 	mov cx,0607H
 	int 10h
 	ret
+
+ards_count:
+    dd 0
+
 [section .s32]
 align 32
 [bits 32]

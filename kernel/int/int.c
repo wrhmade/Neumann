@@ -20,6 +20,10 @@ void isr_handler(registers_t regs)
     struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     asm_cli();
 
+    if(regs.int_no==7)//NM中断
+    {
+        fpu_handler();
+    }
 
     fault_process(regs);
 

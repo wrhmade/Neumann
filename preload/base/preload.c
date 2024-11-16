@@ -106,6 +106,7 @@ void PRELDRMAIN()
     boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2+165,binfo->scrny/2-50,binfo->scrnx/2+165,binfo->scrny/2-50,0xAAAAAA);
 
     putstr_ascii(binfo->vram,binfo->scrnx,binfo->scrnx/2-64,binfo->scrny/2-8,0x555555,"Kernel is ready");
+    free(buf);
 
 	boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-165-1,binfo->scrny/2-50-1,binfo->scrnx/2+165+1,binfo->scrny/2+50+1,0x000000);
     boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-165,binfo->scrny/2-50,binfo->scrnx/2+165,binfo->scrny/2+50,0xAAAAAA);

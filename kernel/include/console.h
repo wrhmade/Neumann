@@ -24,6 +24,7 @@ int console_putchar_norefresh(console_t *console,char c);
 void console_putstr(console_t *console,char *s);
 void console_cleanscreen(console_t *console);
 char *console_input(console_t *console,int len);
+int console_getkey(console_t *console);
 void cmd_run(console_t *console,char *cmdline);
 
 void cmd_mem(console_t *console);
@@ -33,4 +34,5 @@ void cmd_langmode(console_t *console,int lmode);
 void cmd_print(console_t *console,char *filename);
 void cmd_bootinfo(console_t *console);
 void cmd_finfo(console_t *console,char *filename);
+int cmd_runapp(console_t *console,char* cmdline);
 #endif

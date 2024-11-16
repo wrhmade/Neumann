@@ -700,7 +700,7 @@ void ime_init()
 
     status=(ime_status_t *)malloc(sizeof(ime_status_t));
     status->enabled=1;
-    status->inputmode=1;
+    status->inputmode=0;
     
 
 

@@ -11,6 +11,9 @@ default:
 	$(MAKE) -C cmos
 	$(MAKE) -C com
 	$(MAKE) -C lpt
+	$(MAKE) -C fpu
+	$(MAKE) -C cpu
+	$(MAKE) -C pci
 
 clean:
 	$(MAKE) -C io clean
@@ -22,3 +25,6 @@ clean:
 	$(MAKE) -C cmos clean
 	$(MAKE) -C com clean
 	$(MAKE) -C lpt clean
+	$(MAKE) -C fpu clean
+	$(MAKE) -C cpu clean
+	$(MAKE) -C pci clean

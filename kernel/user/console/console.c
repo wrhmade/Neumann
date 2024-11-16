@@ -24,6 +24,7 @@ Copyright W24 Studio
 #include <maths.h>
 #include <message.h>
 #include <ELF.h>
+#include <pci.h>
 void console_main();
 
 
@@ -152,8 +153,11 @@ static int console_putchar_sub(console_t *console,char c,int refresh)
     }
     else if(c=='\b')
     {
-        console_movcur(console,console->curx-1,console->cury);
-        console_setchr(console,console->curx,console->cury,0);
+        if(console->curx>0)
+        {
+            console_movcur(console,console->curx-1,console->cury);
+            console_setchr(console,console->curx,console->cury,0);
+        }
     }
     else
     {
@@ -253,6 +257,21 @@ char *console_input(console_t *console,int len)
     return str;
 }
 
+int console_getkey(console_t *console)
+{
+    task_t *task=console->window->task;
+    int i;
+
+    for(;;)
+    {
+        if(fifo_status(&task->fifo)>0)
+        {
+            i=fifo_get(&task->fifo)-256;
+            return i;
+        }
+    }
+}
+
 void console_main()
 {
     task_t *task=task_now();
@@ -312,6 +331,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_print(console,cmdline+6);
     }
+    else if(strncmp(cmdline,"runapp ",7)==0)
+    {
+        cmd_runapp(console,cmdline);
+    }
     else if(strcmp(cmdline,"dir")==0)
     {
         cmd_dir(console);
@@ -323,6 +346,10 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strcmp(cmdline,"msdemo")==0)
     {
         start_msdemo();
+    }
+    else if(strcmp(cmdline,"lspci")==0)
+    {
+        cmd_lspci(console);
     }
     else if(strncmp(cmdline,"echo ",5)==0)
     {
@@ -726,38 +753,51 @@ static int isexecutable(fileinfo_t *finfo,char *result)
     fat16_read_file(finfo,buf);
     if(elf32Validate((Elf32_Ehdr *)buf))
     {
-        if(task->langmode==1 || task->langmode==2)
+        if(result!=NULL)
         {
-            strcpy(result,"可执行文件(ELF格式)");
+            if(task->langmode==1 || task->langmode==2)
+            {
+                strcpy(result,"可执行文件(ELF格式)");
+            }
+            else
+            {
+                strcpy(result,"Executable File (ELF Format)");
+            }
         }
-        else
-        {
-            strcpy(result,"Executable File (ELF Format)");
-        }
+        free(buf);
         return 1;
     }
-    else if(finfo->size >= 36 && strncmp(buf + 4, "WPRG", 4) == 0 && buf[0] == 0x00)
+    else if(finfo->size>=36 && strncmp(buf + 4, "WPRG", 4) == 0 && buf[0] == 0x00)
     {
-        if(task->langmode==1 || task->langmode==2)
+        if(result!=NULL)
         {
-            strcpy(result,"可执行文件(Neumann旧版格式)");
+            if(task->langmode==1 || task->langmode==2)
+            {
+                strcpy(result,"可执行文件(Neumann旧版格式)");
+            }
+            else
+            {
+                strcpy(result,"Executable File (Neumann Old Format)");
+            }
         }
-        else
-        {
-            strcpy(result,"Executable File (Neumann Old Format)");
-        }
-        return 1;    
+        free(buf);
+        return 2;    
     }
     else
     {
-        if(task->langmode==1 || task->langmode==2)
+        if(result!=NULL)
         {
-            strcpy(result,"不可执行文件");
+
+            if(task->langmode==1 || task->langmode==2)
+            {
+                strcpy(result,"不可执行文件");
+            }
+            else
+            {
+                strcpy(result,"Unexecutable File");
+            }
         }
-        else
-        {
-            strcpy(result,"Unexecutable File");
-        }
+        free(buf);
         return 0;
     }
 }
@@ -830,3 +870,34 @@ void cmd_finfo(console_t *console,char *filename)
     console_putstr(console,s);
     free(result);
 }
+
+int cmd_runapp(console_t *console,char* cmdline)
+{
+    char *fname=cmdline+7,*buf;
+    fileinfo_t finfo;
+    if(fat16_open_file(&finfo,fname)!=0)
+    {
+        console_putstr(console,"没有这个文件.\n");
+        return 0;
+    }
+    // int i=isexecutable(&finfo,NULL);
+    // if(i==0)
+    // {
+    //     console_putstr(console,"这不是系统可执行的文件.\n");
+    //     free(buf);
+    //     return 0;
+    // }
+
+    buf=(char *)malloc(sizeof(char)*(finfo.size+5));
+    fat16_read_file(&finfo,buf);
+    // if(i==2)//WPRG
+    // {
+    //     start_wprg(console,buf);
+    // }
+    
+    asm("jmp %0" : : "m"(buf));
+
+    free(buf);
+    return 0;
+}
+

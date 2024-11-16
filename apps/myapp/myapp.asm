@@ -1,10 +1,14 @@
 [BITS 32]
-section .code
-
-global main
-
-main:
+a:
+    mov eax,1
+    mov ebx,mess
+    int 80h
+    mov eax,6
+    mov ebx,50
+    int 80h
     mov eax,0
     mov ebx,'A'
     int 80h
-    ret
+    jmp a
+
+mess db "Loading...",0

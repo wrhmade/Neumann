@@ -133,6 +133,8 @@ static void init_idt()
     idt_set_gate(46, (uint32_t) irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t) irq15, 0x08, 0x8E);
 
+    idt_set_gate(0x80, (uint32_t) syscall_handler, 0x08, 0x8E | 0x60);
+
 }
 
 

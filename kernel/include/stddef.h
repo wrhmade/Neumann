@@ -10,6 +10,8 @@ Copyright W24 Studio
 
 typedef __INTPTR_TYPE__  ssize_t;
 typedef __UINTPTR_TYPE__ size_t;
+typedef __INTPTR_TYPE__				intptr_t;
+typedef __UINTPTR_TYPE__			uintptr_t;
 
 typedef int8_t bool;
 #define true 1

@@ -35,7 +35,14 @@
         "buzzer.h": "c",
         "task.h": "c",
         "ime.h": "c",
-        "keyboard.h": "c"
+        "keyboard.h": "c",
+        "wprg.h": "c",
+        "syscall.h": "c",
+        "com.h": "c",
+        "krnlcons.h": "c",
+        "fpu.h": "c",
+        "cpu.h": "c",
+        "stdint-gcc.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

@@ -9,8 +9,11 @@ Copyright W24 Studio
 #include <com.h>
 #include <io.h>
 
+#define DISABLE_SERIAL 1//关闭串口调试
+
 int init_com(void)
 {
+	if(DISABLE_SERIAL)return 1;
     io_out8(SERIAL_PORT + 1, 0x00); // 禁止COM的中断发生
 	io_out8(SERIAL_PORT + 3, 0x80); // 启用DLAB（设置波特率除数）。
 	io_out8(SERIAL_PORT + 0, 0x03); // 设置除数为3，(低位) 38400波特
@@ -42,6 +45,7 @@ int serial_received(void)
 /* 读串口 */
 char read_serial(void)
 {
+	if(DISABLE_SERIAL)return;
 	while (serial_received() == 0);
 	return io_in8(SERIAL_PORT);
 }
@@ -55,6 +59,7 @@ int is_transmit_empty(void)
 /* 写串口 */
 void write_serial(char a)
 {
+	if(DISABLE_SERIAL)return;
 	while (is_transmit_empty() == 0);
 	io_out8(SERIAL_PORT, a);
 }
@@ -62,6 +67,7 @@ void write_serial(char a)
 /*串口输出字符串*/
 void serial_putstr(char *s)
 {
+	if(DISABLE_SERIAL)return;
     while(*s)
     {
         write_serial(*s);

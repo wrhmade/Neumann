@@ -14,40 +14,137 @@ Copyright W24 Studio
 #include <string.h>
 #include <buzzer.h>
 #include <com.h>
+#include <krnlcons.h>
 
 void fault_process(registers_t regs)
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0x000000);
+    
+    krnlcons_display();
+
+    krnlcons_change_backcolor(0x0000AA);
+    krnlcons_cleanscreen();
+    krnlcons_putstr("Your system is currently experiencing some issues, which are preventing you from continuing to use it. If this is your first time encountering this issue, please force a restart. If you frequently encounter this issue, consider whether there is a problem with your computer or system.\n");
+    krnlcons_putstr("Here are some technical information that can help you solve this error:\n");
     
     
 
-    putstr_ascii(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,"System Fault");
-
-    char s[200];
-    sprintf(s,"ISR:%u",regs.int_no);
+    krnlcons_putstr("System Fault\n");
 
 
-    putstr_ascii(binfo->vram,binfo->scrnx,0,16,0xFFFFFF,s);
+    char type[200];
+	switch(regs.int_no)
+	{
+		case 0:
+			strcpy(type,"#DE - Division Error");
+			break;
+		case 1:
+			strcpy(type,"#DB - Debug Exceptions");
+			break;
+		case 2:
+			strcpy(type,"NMI");
+			break;
+		case 3:
+			strcpy(type,"#BP - Breakpoint");
+			break;
+		case 4:
+			strcpy(type,"#OF - Overflow");
+			break;
+		case 5:
+			strcpy(type,"#BR - Bound Check");
+			break;
+		case 6:
+			strcpy(type,"#UD - Invalid Opcode");
+			break;
+		case 7:
+			strcpy(type,"#NM - Coprocessor Not Available");
+			break;
+		case 8:
+			strcpy(type,"#DF - Double Fault");
+			break;
+		case 9:
+			strcpy(type,"CSO - Coprocesser Segment Overrun");
+			break;
+		case 10:
+			strcpy(type,"#TS - INvalid TSS");
+			break;
+		case 11:
+			strcpy(type,"#NP - Segment Not Present");
+			break;
+		case 12:
+			strcpy(type,"#SS - Stack Exception");
+			break;
+		case 13:
+			strcpy(type,"#GP - General Protection Exception");
+			break;
+		case 14:
+			strcpy(type,"#PF - Page Fault");
+			break;
+		case 16:
+			strcpy(type,"#MF - Coprocessor Error");
+			break;
+		case 17:
+			strcpy(type,"#AC");
+			break;
+		case 18:
+			strcpy(type,"#MC");
+			break;
+		case 19:
+			strcpy(type,"#XM");
+			break;
+		case 20:
+			strcpy(type,"#VE");
+			break;
+		default:
+			strcpy(type,"OTH");
+			break;
+	}
+
+    char s[500];
+    sprintf(s,"INT %02XH\n%s\n",regs.int_no,type);
+
+
+    krnlcons_putstr(s);
     serial_putstr(s);
     write_serial('\n');
 
-    sprintf(s,"CS  %010u DS  %010u SS  %010u EIP %010u",regs.cs,regs.ds,regs.ss,regs.eip);
-    putstr_ascii(binfo->vram,binfo->scrnx,0,32,0xFFFFFF,s);
+    sprintf(s,"CS  %010u DS  %010u SS  %010u EIP %010u\n",regs.cs,regs.ds,regs.ss,regs.eip);
+    krnlcons_putstr(s);
     serial_putstr(s);
-    write_serial('\n');
-    sprintf(s,"EAX %010u EBX %010u ECX %010u EDX %010u",regs.eax,regs.ebx,regs.ecx,regs.edx);
-    putstr_ascii(binfo->vram,binfo->scrnx,0,48,0xFFFFFF,s);
+    sprintf(s,"EAX %010u EBX %010u ECX %010u EDX %010u\n",regs.eax,regs.ebx,regs.ecx,regs.edx);
+    krnlcons_putstr(s);
     serial_putstr(s);
-    write_serial('\n');
-    sprintf(s,"EDI %010u ESI %010u ESP %010u EBP %010u",regs.edi,regs.esi,regs.esp,regs.ebp);
-    putstr_ascii(binfo->vram,binfo->scrnx,0,64,0xFFFFFF,s);
+    sprintf(s,"EDI %010u ESI %010u ESP %010u EBP %010u\n",regs.edi,regs.esi,regs.esp,regs.ebp);
+    krnlcons_putstr(s);
     serial_putstr(s);
-    write_serial('\n');
-    sprintf(s,"EFLAGS %010u USER EIP %010u ERROR CODE %010u",regs.eflags,regs.user_esp,regs.err_code);
-    putstr_ascii(binfo->vram,binfo->scrnx,0,80,0xFFFFFF,s);
+    sprintf(s,"EFLAGS %010u USER EIP %010u ERROR CODE %010u\n",regs.eflags,regs.user_esp,regs.err_code);
+    krnlcons_putstr(s);
     serial_putstr(s);
-    write_serial('\n');
+
+    if(regs.int_no==14)//如果是Page Fault
+    {
+        uint32_t faulting_address;
+        asm volatile("mov %%cr2, %0" : "=r" (faulting_address)); //
+
+        int present = !(regs.err_code & 0x1); // 页不存在
+        int rw = regs.err_code & 0x2; // 只读页被写入
+        int us = regs.err_code & 0x4; // 用户态写入内核页
+        int reserved = regs.err_code & 0x8; // 写入CPU保留位
+        int id = regs.err_code & 0x10; // 由取指引起
+
+        if (present) {
+            sprintf(s,"*** Page Fault:Present *** at 0x%08x",faulting_address);
+        } else if (rw) {
+            sprintf(s,"*** Page Fault:Read-Only *** at 0x%08x",faulting_address);
+        } else if (us) {
+            sprintf(s,"*** Page Fault:User-Mode *** at 0x%08x",faulting_address);
+        } else if (reserved) {
+            sprintf(s,"*** Page Fault:Reversed *** at 0x%08x",faulting_address);
+        } else if (id) {
+            sprintf(s,"*** Page Fault:Decode Address *** at 0x%08x",faulting_address);
+        }
+        krnlcons_putstr(s);
+    }
 
     serial_putstr("\nSystem Halted.");
     for(;;)

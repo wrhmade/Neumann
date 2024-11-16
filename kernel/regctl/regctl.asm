@@ -4,7 +4,7 @@
 
 [BITS 32]
 global load_eflags,load_cr0,load_tr
-global store_eflags,store_cr0
+global store_eflags,store_cr0,set_cr3
 
 load_eflags:
     pushfd ; eflags寄存器只能用pushfd/popfd操作，将eflags入栈/将栈中内容弹入eflags
