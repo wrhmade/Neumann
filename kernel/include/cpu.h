@@ -108,4 +108,5 @@ typedef struct CPU_VERSION
 } __attribute__((packed)) cpu_version_t;
 
 void cpu_version(cpu_version_t *ver);
+void cpu_get_model_name(char *model_name);
 #endif

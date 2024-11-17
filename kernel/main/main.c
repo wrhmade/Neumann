@@ -50,6 +50,64 @@ sheet_t *keywin;
 #define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
 #define PROCESS_SUM 13
 
+void _PUTSTR(console_t *console,char *s)
+{
+	if(console==NULL)
+	{
+		krnlcons_putstr(s);
+	}
+	else
+	{
+		console_putstr(console,s);
+	}
+}
+
+void print_pcinfo(console_t *console)
+{
+	char s[200];
+	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+	_PUTSTR(console,"\n\nComputer Info\n---------------------------------\nItem\t\t\tValue\n---------------------------------\n");
+	_PUTSTR(console,"CPU\n");
+
+	cpu_version_t ver;
+	cpu_vendor_t vendor;
+	cpu_version(&ver);
+	cpu_vendor_id(&vendor);
+
+	_PUTSTR(console,"\tModel Name\t");
+	char model_name[50];
+	cpu_get_model_name(model_name);
+	sprintf(s,"%s\n",model_name);
+	_PUTSTR(console,s);
+
+	_PUTSTR(console,"\tVendor\t\t");
+	sprintf(s,"%s\n",vendor.info);
+	_PUTSTR(console,s);
+
+
+	_PUTSTR(console,"\tFPU\t\t\t");
+	if(ver.FPU)
+	{
+		_PUTSTR(console,"True\n");
+	}
+	else
+	{
+		_PUTSTR(console,"False\n");
+	}
+	_PUTSTR(console,"\tBase Count\t");
+	sprintf(s,"%08x\n",binfo->base_count);
+	_PUTSTR(console,s);
+
+	
+	_PUTSTR(console,"Memory\t\t\t");
+	sprintf(s,"%dMB\n",binfo->memtotal/1024/1024);
+	_PUTSTR(console,s);
+
+	_PUTSTR(console,"PCI\t\t\t\t");
+	sprintf(s,"%d Total\n",count_pci_device());
+	_PUTSTR(console,s);
+
+}
 
 void process_forward(void)
 {
@@ -304,6 +362,7 @@ void krnlc_main(void)
 	
 	log("Benching CPU...");
 	uint32_t base_count=benchcpu();
+	binfo->base_count=base_count;
 	sprintf(s,"Base Count is %08x",base_count);
 	log(s);
 
@@ -311,21 +370,8 @@ void krnlc_main(void)
 
 	
 	#if DEBUGMODE
-	krnlcons_putstr("\n\nComputer Info\n---------------------------------\nItem\t\t\tValue\n---------------------------------\n");
-	krnlcons_putstr("CPU\n");
-
-	cpu_version_t ver;
-	cpu_version(&ver);
-
-	krnlcons_putstr("\tBase Count\t");
-	sprintf(s,"%08x\n",base_count);
-	krnlcons_putstr(s);
 	
-	krnlcons_putstr("Memory\t\t\t");
-	sprintf(s,"%dMB\n",binfo->memtotal/1024/1024);
-	krnlcons_putstr(s);
-
-	
+	print_pcinfo(NULL);
 
 	#endif
 

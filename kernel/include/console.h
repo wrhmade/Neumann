@@ -35,4 +35,5 @@ void cmd_print(console_t *console,char *filename);
 void cmd_bootinfo(console_t *console);
 void cmd_finfo(console_t *console,char *filename);
 int cmd_runapp(console_t *console,char* cmdline);
+void cmd_autofill(console_t *console,char *cmdline);
 #endif

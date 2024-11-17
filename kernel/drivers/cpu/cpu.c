@@ -52,3 +52,25 @@ void cpu_version(cpu_version_t *item)
           "=d"(*((uint32_t *)item + 3))
         : "a"(1));
 }
+
+void cpuid(unsigned int op, unsigned int *eax, unsigned int *ebx, unsigned int *ecx, unsigned int *edx)
+{
+	*eax = op;
+	*ecx = 0;
+	asm volatile("cpuid"
+				: "=a" (*eax),				//杈撳嚭鍙傛暟
+				"=b" (*ebx),
+				"=c" (*ecx),
+				"=d" (*edx)
+				: "0" (*eax), "2" (*ecx)	//杈撳叆鍙傛暟
+				: "memory");
+}
+
+void cpu_get_model_name(char *model_name)
+{
+	unsigned int *v = (unsigned int *) model_name;
+	cpuid(0x80000002, &v[0], &v[1], &v[2], &v[3]);
+	cpuid(0x80000003, &v[4], &v[5], &v[6], &v[7]);
+	cpuid(0x80000004, &v[8], &v[9], &v[10], &v[11]);
+	model_name[48] = 0;
+}

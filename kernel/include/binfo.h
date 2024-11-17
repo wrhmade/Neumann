@@ -13,5 +13,6 @@ struct BOOTINFO
 	uint32_t *vram;
 	uint32_t memtotal;
 	char *hzk16,*hzk16f;
+	uint32_t base_count;
 } __attribute__((packed)); 
 #endif

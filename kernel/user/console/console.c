@@ -27,6 +27,12 @@ Copyright W24 Studio
 #include <pci.h>
 void console_main();
 
+static char commands[21][15]={"mem","exit","cls","newconsole","count","bootinfo","messtest","print","runapp",
+			"dir","dzero","msdemo","lspci","echo","mkfile","rdfile","wrfile","del","langmode","finfo","pcinfo"};
+
+#define COMMAND_NOW 21 //命令数量
+
+
 
 console_t *open_console(void)
 {
@@ -351,6 +357,10 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_lspci(console);
     }
+    else if(strcmp(cmdline,"pcinfo")==0)
+    {
+        print_pcinfo(console);
+    }
     else if(strncmp(cmdline,"echo ",5)==0)
     {
         console_putstr(console,cmdline+5);
@@ -443,6 +453,7 @@ void cmd_run(console_t *console,char *cmdline)
         {
             console_putstr(console,"此命令无效.\n");
         }
+        cmd_autofill(console,cmdline);
     }
 }
 
@@ -901,3 +912,34 @@ int cmd_runapp(console_t *console,char* cmdline)
     return 0;
 }
 
+//自动预测
+void cmd_autofill(console_t *console,char *cmdline)
+{
+    int i,first_print=0,printed=0;
+    task_t *task=task_now();
+    for(i=0;i<COMMAND_NOW;i++)
+    {
+        if(strncmp(cmdline,commands[i],strlen(cmdline))==0)
+        {
+            if(first_print==0)
+            {
+                first_print=1;
+                if(task->langmode==1 || task->langmode==2)
+                {
+                    console_putstr(console,"预测命令:");
+                }
+                else
+                {
+                    console_putstr(console,"Prediction command:");
+                }
+            }
+            console_putstr(console,commands[i]);
+            console_putchar(console,' ');
+            printed=1;
+        }
+    }
+    if(printed)
+    {
+        console_putstr(console,"\n");
+    }
+}
