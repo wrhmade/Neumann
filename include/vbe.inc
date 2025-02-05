@@ -1,0 +1,4 @@
+COLOR_BITS equ 32
+XSIZE equ 1600
+YSIZE equ 900
+COLOR_MODE equ 6

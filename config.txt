@@ -1,0 +1,29 @@
+GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312
+GCC2 =gcc -m32 -O0
+AR	=ar
+LD	=ld  -nostdlib -m $(LD_FORMAT)
+OBJCOPY	=objcopy
+NASM	=nasm
+MAKE	=make
+BIN2OBJ =./bin2obj
+DEL	=   rm -f
+DD = dd
+
+QEMU = qemu-system-i386
+QEMU_IMG = qemu-img
+
+FTCOPY = tools/ftcopy
+FTFORMAT = tools/ftformat
+FTIMGCREATE = tools/ftimgcreate
+FTLS = tools/ftls
+FTRM = tools/ftrm
+HEXVIEW = tools/hexview
+FVDISK = tools/fvdisk
+
+IMAGENAME	=	boothd.img
+IMAGENAME_VHD	=	boothd.vhd
+IMAGENAME_VMDK	=	boothd.vmdk
+NASM_FORMAT	=	elf
+LD_FORMAT	=	elf_i386
+
+MEMORY_SIZE = 256

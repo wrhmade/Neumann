@@ -1,0 +1,11 @@
+[theme]
+name=Default
+
+[window]
+window_title_bc=0x07689F
+window_title_fc=0xFFFFFF
+window_close_bc=0xFF0000
+window_close_fc=0xFAFAFA
+
+[wallpaper]
+wallpaper=default.jpg

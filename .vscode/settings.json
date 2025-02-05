@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "theme.h": "c",
+        "graphic.h": "c",
+        "string.h": "c",
+        "mm.h": "c",
+        "task.h": "c",
+        "sysset.h": "c",
+        "desktop.h": "c",
+        "window.h": "c",
+        "sheet.h": "c",
+        "syscall.h": "c"
+    }
+}
