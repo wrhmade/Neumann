@@ -7,12 +7,17 @@ Copyright W24 Studio
 #ifndef CONSOLE_H
 #define CONSOLE_H
 #include <window.h>
+#define CMDLINE_MAXLEN 200
+#define MAX_ARG_NR 30
+
 typedef struct CONSOLE
 {
     window_t *window;
     char consbuf[80][25];
     uint32_t colorbuf[80][25];
+    task_t *running_app;
     int curx,cury;
+    char cmdline[CMDLINE_MAXLEN];
 }console_t;
 console_t *open_console(void);
 void close_console(console_t *console);
@@ -31,9 +36,11 @@ char *console_input(console_t *console,int len);
 int console_getkey(console_t *console);
 void cmd_run(console_t *console,char *cmdline);
 
+void cmd_mkdir(console_t *console,char *dirname);
+void cmd_cd(console_t *console,char *dirname);
 void cmd_mem(console_t *console);
 void cmd_count(console_t *console);
-void cmd_dir(console_t *console);
+void cmd_ls(console_t *console);
 void cmd_langmode(console_t *console,int lmode);
 void cmd_print(console_t *console,char *filename);
 void cmd_bootinfo(console_t *console);

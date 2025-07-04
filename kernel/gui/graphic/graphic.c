@@ -11,6 +11,7 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <mm.h>
 #include <stddef.h>
+#include <dbuffer.h>
 
 uint16_t LCD_AlphaBlend(uint32_t foreground_color,uint32_t background_color,uint8_t alpha)
 {
@@ -145,8 +146,8 @@ void putstr_ascii_lmode(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, 
 
 void putfont_gb2312(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t c,char *font1,char *font2)
 {
-	char *New1=(char *)malloc(sizeof(char)*16);
-	char *New2=(char *)malloc(sizeof(char)*16);
+	char New1[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	char New2[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	int i=0,j=0;
 	while(i<8)
 	{
@@ -177,9 +178,6 @@ void putfont_gb2312(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t
 	}
 	putfont(vram,xsize,x,y,c,New1);
 	putfont(vram,xsize,x+8,y,c,New2);
-	free(New1);
-	free(New2);
-
 																	
 }
 

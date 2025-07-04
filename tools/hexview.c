@@ -91,10 +91,21 @@ int hexview() // hexview主要部分，main主要在处理参数
                 if (content[j] >= 0x20 && content[j] <= 0x7e) putchar(content[j]); // 同上
                 else putchar(placeholder); // 用上
             }
+            printf("\n"); // 本行结束
         }
         i += start; // 前面减了start，为继续遍历，这里加回来
     }
     free(content); // 把分配的content释放
+    // 给封个底
+    printf("---------+"); // 最后一行，9个-（前面9个字符xxxx:xxxx）加一个+，显示效果更美观
+    for (int i = 0; i < row_byte_cnt; i++) {
+        printf("---"); // 每一行对应三个-（数前空格一个，数本身两个）
+    }
+    printf("-+"); // 还有一个空格用-，+表示下一列
+    for (int i = 0; i <= max(row_byte_cnt, 6); i++) {
+        printf("-"); // ascii共5个字符，需要完全包裹住；同时，每行多少字节就有多少ascii，所以两者取max
+    }
+    printf("\n"); // 表头完毕，正文开始
     return 0;
 }
 // 打印使用方法，不多讲

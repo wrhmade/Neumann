@@ -14,6 +14,8 @@ Copyright W24 Studio
 #include <graphic.h>
 #include <fifo.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 void log(char *s);
 
 #define PORT_KEYDAT		0x0060
@@ -328,5 +330,5 @@ void init_keyboard(void)
     set_leds();
 
     
-    register_interrupt_handler(IRQ1,keyboard_handler);
+    register_interrupt_handler(IRQ1,&keyboard_handler);
 }

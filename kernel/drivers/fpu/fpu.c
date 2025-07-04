@@ -12,6 +12,8 @@ Copyright W24 Studio
 #include <gdtidt.h>
 #include <mm.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 task_t *last_fpu_task = NULL;
 
 bool check_fpu()
@@ -69,7 +71,7 @@ void fpu_enable(task_t *task)
             "fninit \n");
 
         //LOGK("FPU create state for task 0x%p\n", task);
-        task->fpu = (fpu_t *)malloc(sizeof(fpu_t));
+        task->fpu = (fpu_t *)kmalloc(sizeof(fpu_t));
         task->flags |= (TASK_FPU_ENABLED | TASK_FPU_USED);
     }
 }

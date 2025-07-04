@@ -4,7 +4,8 @@ task.c
 Copyright W24 Studio 
 */
 
-#include <stdint.h> 
+#include <nasmfunc.h>
+#include <stddef.h> 
 #include <task.h>
 #include <gdtidt.h>
 #include <int.h>
@@ -18,11 +19,14 @@ Copyright W24 Studio
 extern void farjmp(int,int);
  
 taskctl_t *taskctl;
- 
+task_t *idle;
+
+void task_idle();
+
 task_t *task_init()
 {
     task_t *task;
-    taskctl = (taskctl_t *) malloc(sizeof(taskctl_t));
+    taskctl = (taskctl_t *) kmalloc(sizeof(taskctl_t));
     for (int i = 0; i < MAX_TASKS; i++) {
         taskctl->tasks0[i].flags = 0;
         taskctl->tasks0[i].sel = (TASK_GDT0 + i) * 8;
@@ -31,6 +35,7 @@ task_t *task_init()
         gdt_set_gate(TASK_GDT0 + MAX_TASKS + i, (int) &taskctl->tasks0[i].ldt, 15, 0x82); // 0x82 代表 LDT，两个 GDT 表项共计 16 字节
         
     }
+
     task = task_alloc();
     task->flags = 2;
     taskctl->running = 1;
@@ -38,9 +43,20 @@ task_t *task_init()
     taskctl->tasks[0] = task;
     load_tr(task->sel); // 向CPU报告当前task->sel对应的任务为正在运行的任务
 
+    idle=create_kernel_task(task_idle);
+
+    task_run(idle);
+
     return task;
 }
 
+void task_idle()
+{
+    for(;;)
+    {
+        asm_hlt();
+    }
+}
 
 task_t *task_alloc()
 {
@@ -57,7 +73,7 @@ task_t *task_alloc()
             task->my_retval.pid = -1;      // 这里是新增的部分
             task->my_retval.val = -114514; // 这里是新增的部分
             task->window=NULL;
-            task->fifobuf=(uint32_t *)malloc(sizeof(uint32_t)*128);
+            task->fifobuf=(uint32_t *)kmalloc(sizeof(uint32_t)*128);
             fifo_init(&task->fifo,128,task->fifobuf);
             task->fd_table[0] = 0; // 标准输入，占位
             task->fd_table[1] = 1; // 标准输出，占位
@@ -65,6 +81,11 @@ task_t *task_alloc()
             for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
                 task->fd_table[i] = -1; // 其余文件均可用
             }
+
+            task->work_dir=kmalloc(260);
+            strcpy(task->work_dir,"/");
+
+            task->is_user = false;
             task->langmode=0;
             task->langbyte=0;
             return task;
@@ -135,13 +156,22 @@ void task_exit(int value)
 
 
 
+
+
 int task_wait(int pid)
 {
     task_t *task = &taskctl->tasks0[pid]; // 找出对应的task
     while (task->my_retval.pid == -1); // 若没有返回值就一直等着
     task->flags = 0; // 释放为可用
+    // 总算把你等死了，释放该任务所占资源
+    for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
+        if (task->fd_table[i] != -1) sys_close(task->fd_table[i]); // 关闭所有打开的文件
+    }
+    // 该任务kmalloc的所有东西都在数据段里，所以释放了数据段就相当于全释放了
+    if (task->is_user) kfree((void *) task->ds_base); // 释放数据段
     return task->my_retval.val; // 拿到返回值
-}  
+}
+
 
 int task_pid(task_t *task)
 {
@@ -154,7 +184,7 @@ task_t *create_kernel_task(void *entry)
 {
     task_t *new_task;
     new_task = task_alloc();
-    new_task->tss.esp = (uint32_t) malloc(64 * 1024) + 64 * 1024 - 4;
+    new_task->tss.esp = (uint32_t) kmalloc(STACK_SIZE * 1024) + STACK_SIZE * 1024 - 4;
     new_task->tss.eip = (int) entry;
     new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
     new_task->tss.cs = 1 * 8;

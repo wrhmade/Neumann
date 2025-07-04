@@ -1,7 +1,7 @@
-GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312
+GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312 -nostdinc -mno-mmx -mno-sse -mno-sse2
 GCC2 =gcc -m32 -O0
 AR	=ar
-LD	=ld  -nostdlib -m $(LD_FORMAT)
+LD	=ld -m $(LD_FORMAT)
 OBJCOPY	=objcopy
 NASM	=nasm
 MAKE	=make
@@ -13,12 +13,9 @@ QEMU = qemu-system-i386
 QEMU_IMG = qemu-img
 
 FTCOPY = tools/ftcopy
-FTFORMAT = tools/ftformat
-FTIMGCREATE = tools/ftimgcreate
+FTIMAGE = tools/ftimage
 FTLS = tools/ftls
-FTRM = tools/ftrm
 HEXVIEW = tools/hexview
-FVDISK = tools/fvdisk
 
 IMAGENAME	=	boothd.img
 IMAGENAME_VHD	=	boothd.vhd

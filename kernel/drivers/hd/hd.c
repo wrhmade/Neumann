@@ -6,9 +6,10 @@ Copyright W24 Studio
 
 #include <hd.h>
 #include <io.h>
-#include <stdint.h>
+#include <stddef.h>
 #include <mm.h>
 #include <com.h>
+#include <vdisk.h>
 
 static int hd_size_cache = 0;
 
@@ -115,7 +116,7 @@ int get_hd_sects()
     io_out16(0x1f6, 0x00);
     io_out16(0x1f7, 0xec); // IDENTIFY 命令
     wait_disk_ready();
-    uint16_t *hdinfo = (uint16_t *) malloc(512);
+    uint16_t *hdinfo = (uint16_t *) kmalloc(512);
     char *buffer = (char *) hdinfo;
     for (int i = 0; i < 256; i++) {
         // 每次硬盘会发送2个字节数据
@@ -124,6 +125,36 @@ int get_hd_sects()
         buffer += 2;
     }
     int sectors = ((int) hdinfo[61] << 16) + hdinfo[60];
-    free(hdinfo);
+    kfree(hdinfo);
     return (hd_size_cache = sectors);
+}
+
+/* 传递给vdisk的读接口 */
+static void Read(int drive, byte *buffer, uint number, uint lba)
+{
+    hd_read(lba,number,(void *)buffer);
+}
+
+/* 传递给vdisk的写接口 */
+static void Write(int drive, byte *buffer, uint number, uint lba)
+{
+    hd_write(lba,number,(void *)buffer);
+}
+
+//将IDE磁盘加入到vdisk中
+void hd_init()
+{
+    // uint8_t data = io_in8(0x1f7);
+    // if ((data & 0x88)!=0x08)//找不到磁盘
+    // {
+    //     return;
+    // }
+    // wait_disk_ready();
+    vdisk vd;
+    vd.flag=1;
+    vd.Read=Read;
+    vd.Write=Write;
+    vd.sector_size=get_hd_sects();
+    strcpy(vd.DriveName,"hda");
+    register_vdisk(vd);
 }

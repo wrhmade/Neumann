@@ -6,10 +6,11 @@ Copyright W24 Studio
 
 #ifndef TASK_H
 #define TASK_H
-#include <stdint.h>
+#include <stddef.h>
 #include <fifo.h>
 #include <fpu.h>
 #include <gdtidt.h>
+#include <vfs.h>
 #define MAX_FILE_OPEN_PER_TASK 32
 typedef struct WINDOW window_t;
  
@@ -45,11 +46,15 @@ typedef struct TASK {
     int ds_base;
     struct fpu_t *fpu;
     tss32_t tss;
+    bool is_user;
+    void *brk_start, *brk_end; // here
+    char *work_dir;
 } task_t;
  
 #define MAX_TASKS 1000
 #define TASK_GDT0 3
 
+#define STACK_SIZE 1024
  
 typedef struct TASKCTL {
     int running, now;
@@ -66,5 +71,7 @@ task_t *task_now();
 int task_pid(task_t *task);
 void task_exit(int value);
 int task_wait(int pid);
+void task_remove(task_t *task);
 task_t *create_kernel_task(void *entry);
+
 #endif

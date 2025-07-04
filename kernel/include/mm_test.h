@@ -8,6 +8,7 @@ Copyright W24 Studio
 #define MM_H
 #include <stdint.h>
 #include <list.h>
+#include <slist-strptr.h>
 
 typedef u32 ptr_t;
 
@@ -83,8 +84,8 @@ static size_t phy_alloc_idx;      // 可分配物理页 起始索引
 static bitmap_t kernel_map;       // 内核虚拟内存位图
 static size_t kernel_map_size;    // 内核虚拟内存位图页数
 
-static u32 kernel_pt[6];   // 内核页表基址数组
-static u32 frame_pt[4];    // 帧缓冲页表基址数组
+static u32 kernel_pt[1];   // 内核页表基址数组
+static u32 frame_pt[5];    // 帧缓冲页表基址数组
 
 void get_ards_info(ptr_t ptr);
 void phy_init(void);
@@ -97,6 +98,7 @@ void vir_mapping(void);
 void *kvalloc(size_t cnt);
 void kvfree(void *ptr, size_t cnt);
 void memory_init_sub(void);
+
 
 
 #define DESC_COUNT 7
@@ -121,8 +123,9 @@ typedef struct arena_t
     u32 magic;                // 魔数
 } arena_t;
 
-void *malloc(uint32_t size);
-void free(void *ptr);
+void *kmalloc(size_t size);
+void kfree(void *ptr);
+void *krealloc(void *buffer, int size);
 
 uint32_t memtest(uint32_t start, uint32_t end);
 uint32_t free_space_total(void);

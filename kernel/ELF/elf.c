@@ -6,25 +6,47 @@ Copyright W24 Studio
 
 #include <ELF.h>
 #include <string.h>
+#include <mm.h>
 
-bool elf32Validate(Elf32_Ehdr *hdr) {
-  return hdr->e_ident[EI_MAG0] == ELFMAG0 && hdr->e_ident[EI_MAG1] == ELFMAG1 &&
-         hdr->e_ident[EI_MAG2] == ELFMAG2 && hdr->e_ident[EI_MAG3] == ELFMAG3;
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) < (b) ? (b) : (a))
+
+bool elf32Validate(Elf32_Ehdr *ehdr)
+{
+    return memcmp(ehdr->e_ident, "\177ELF\1\1\1", 7)==0;
 }
 
-void load_segment(Elf32_Phdr *phdr, void *elf) {
-  //klogf("%08x %08x %d\n", phdr->p_vaddr, phdr->p_offset, phdr->p_filesz);
-  memcpy((void *)phdr->p_vaddr, elf + phdr->p_offset, phdr->p_filesz);
-  if (phdr->p_memsz > phdr->p_filesz) { // 这个是bss段
-    memset((void *)(phdr->p_vaddr + phdr->p_filesz), 0, phdr->p_memsz - phdr->p_filesz);
-  }
+static void calc_load_range(Elf32_Ehdr *ehdr, uint32_t *first, uint32_t *last)
+{
+    Elf32_Phdr *phdr = (Elf32_Phdr *) ((uint32_t) ehdr + ehdr->e_phoff); // 第一个 program header 地址
+    *first = 0xffffffff; // UINT32最大值
+    *last = 0; // UINT32最小值
+
+    for (uint16_t i = 0; i < ehdr->e_phnum; i++) { // 遍历每一个 program header
+        if (phdr[i].p_type != PT_LOAD) continue; // 只关心LOAD段
+        *first = min(*first, phdr[i].p_vaddr);
+        *last = max(*last, phdr[i].p_vaddr + phdr[i].p_memsz); // 每一个program header首尾取最值
+    }
 }
 
-uint32_t load_elf(Elf32_Ehdr *hdr) {
-  Elf32_Phdr *phdr = (Elf32_Phdr *)((uint32_t)hdr + hdr->e_phoff);
-  for (int i = 0; i < hdr->e_phnum; i++) {
-    load_segment(phdr, (void *)hdr);
-    phdr++;
-  }
-  return hdr->e_entry;
+static void copy_load_segments(Elf32_Ehdr *ehdr, char *buf)
+{
+    Elf32_Phdr *phdr = (Elf32_Phdr *) ((uint32_t) ehdr + ehdr->e_phoff); // 第一个 program header 地址
+    for (uint16_t i = 0; i < ehdr->e_phnum; i++) { // 遍历每一个 program header
+        if (phdr[i].p_type != PT_LOAD) continue; // 只关心LOAD段
+        uint32_t segm_in_file = (uint32_t) ehdr + phdr[i].p_offset; // 段在文件中的位置
+        memcpy(buf + phdr[i].p_vaddr, (void *) segm_in_file, phdr[i].p_filesz); // 将文件中大小的部分copy过去
+        uint32_t remain_bytes = phdr[i].p_memsz - phdr[i].p_filesz; // 两者之差
+        memset(buf + (phdr[i].p_vaddr + phdr[i].p_filesz), 0, remain_bytes); // 赋值为0
+    }
+}
+
+
+int load_elf(Elf32_Ehdr *ehdr, char **buf, uint32_t *first, uint32_t *last)
+{
+    if (memcmp(ehdr->e_ident, "\177ELF\1\1\1", 7)) return -1; // 魔数不对，不予执行
+    calc_load_range(ehdr, first, last); // 计算加载位移
+    *buf = (char *) kmalloc(*last - *first + 5); // 用算得的大小分配内存
+    copy_load_segments(ehdr, *buf); // 把 ELF 
+    return ehdr->e_entry;
 }

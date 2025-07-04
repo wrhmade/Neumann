@@ -27,6 +27,7 @@ typedef struct SHEET
     shtctl_t *ctl;
     window_t *window; //对应的窗口
     uint32_t movable;//可被鼠标拖移
+    task_t *task;
 }sheet_t;
 
 //图层控制结构体
@@ -46,6 +47,6 @@ void sheet_updown(sheet_t *sht, int height);
 void sheet_refresh(sheet_t *sht, int bx0, int by0, int bx1, int by1);
 void sheet_slide(sheet_t *sht, int vx0, int vy0);
 void sheet_free(sheet_t *sht);
-
+shtctl_t *shtctl_init(unsigned int *vram, int xs, int ys);
 void putstr_ascii_sheet(sheet_t *sht, int x, int y, uint32_t c, uint32_t b, char *s);
 #endif

@@ -74,7 +74,7 @@ typedef struct
 
     /* for dll 
     
-    JPEG *jpeg = (JPEG *)malloc(sizeof(JPEG) + 256);
+    JPEG *jpeg = (JPEG *)kmalloc(sizeof(JPEG) + 256);
     */
     int dummy[64];
     

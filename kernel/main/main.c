@@ -22,7 +22,6 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <console.h>
 #include <cmos.h>
-#include <fat16.h>
 #include <ini.h>
 #include <string.h>
 #include <com.h>
@@ -32,6 +31,20 @@ Copyright W24 Studio
 #include <fpu.h>
 #include <cpu.h>
 #include <pci.h>
+#include <fdc.h>
+#include <syscall.h>
+#include <vfs.h>
+#include <vdisk.h>
+#include <devfs.h>
+#include <fat.h>
+#include <hd.h>
+#include <fullscreen.h>
+#include <dbuffer.h>
+#include <ide.h>
+#include <iso9660.h>
+#include <stdio.h>
+#include <exec.h>
+#include <nullzero.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -47,13 +60,9 @@ int process=0;
 int mouse_x,mouse_y;
 sheet_t *keywin;
 
-#define PROCESS_COLOR 0xFF0000
-#define PROCESS_BACKCOLOR DESKTOP_BACKCOLOR
-#define PROCESS_SUM 13
-
 void _PUTSTR(console_t *console,char *s)
 {
-	if(console==NULL)
+	if(console==0)
 	{
 		krnlcons_putstr(s);
 	}
@@ -67,7 +76,7 @@ void print_pcinfo(console_t *console)
 {
 	char s[200];
 	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-	_PUTSTR(console,"\n\nComputer Info\n---------------------------------\nItem\t\t\tValue\n---------------------------------\n");
+	_PUTSTR(console,"\n\nComputer Info\n-------------------------------------------------------------------------------\nItem\t\t\t\tValue\n-------------------------------------------------------------------------------\n");
 	_PUTSTR(console,"CPU\n");
 
 	cpu_version_t ver;
@@ -75,18 +84,18 @@ void print_pcinfo(console_t *console)
 	cpu_version(&ver);
 	cpu_vendor_id(&vendor);
 
-	_PUTSTR(console,"\tModel Name\t");
+	_PUTSTR(console,"\tModel Name\t\t");
 	char model_name[50];
 	cpu_get_model_name(model_name);
 	sprintf(s,"%s\n",model_name);
 	_PUTSTR(console,s);
 
-	_PUTSTR(console,"\tVendor\t\t");
+	_PUTSTR(console,"\tVendor\t\t\t");
 	sprintf(s,"%s\n",vendor.info);
 	_PUTSTR(console,s);
 
 
-	_PUTSTR(console,"\tFPU\t\t\t");
+	_PUTSTR(console,"\tFPU\t\t\t\t");
 	if(ver.FPU)
 	{
 		_PUTSTR(console,"True\n");
@@ -95,30 +104,90 @@ void print_pcinfo(console_t *console)
 	{
 		_PUTSTR(console,"False\n");
 	}
-	_PUTSTR(console,"\tBase Count\t");
+	_PUTSTR(console,"\tBase Count\t\t");
 	sprintf(s,"%08x\n",binfo->base_count);
 	_PUTSTR(console,s);
 
 	
-	_PUTSTR(console,"Memory\t\t\t");
+	_PUTSTR(console,"Memory\t\t\t\t");
 	sprintf(s,"%dMB\n",binfo->memtotal/1024/1024);
 	_PUTSTR(console,s);
 
-	_PUTSTR(console,"PCI\t\t\t\t");
+	_PUTSTR(console,"PCI\t\t\t\t\t");
 	sprintf(s,"%d Total\n",count_pci_device());
 	_PUTSTR(console,s);
 
-}
+	_PUTSTR(console,"Storage Devices\n");
+	_PUTSTR(console,"\tFloppy Disk\t\t");
+	int fdinfo=get_fdinfo();
+	if(fdinfo==-1)
+	{
+		_PUTSTR(console,"None\n");
+	}
+	else
+	{
+		switch(fdinfo)
+		{
+			case 0:
+				_PUTSTR(console,"3.5-inch/1.44MB\n");
+				break;
+			case 1:
+				_PUTSTR(console,"3.5-inch/1.68MB\n");
+				break;
+		}
+		
+	}
+	_PUTSTR(console,"\tIDE\n");
+	ide_info_t info;
+	_PUTSTR(console,"\t\tPri. Master\t");
+	get_ide_info(0,0,&info);
+	if(info.reserved)
+	{
+		sprintf(s,"%s [%s,%dKB]\n",info.name,info.type?"ATAPI":"ATA",info.size/2);
+		_PUTSTR(console,s);
+	}
+	else
+	{
+		_PUTSTR(console,"(None)\n");
+	}
+	
+	_PUTSTR(console,"\t\tPri. Slave\t");
+	get_ide_info(0,1,&info);
+	if(info.reserved)
+	{
+		sprintf(s,"%s [%s,%dKB]\n",info.name,info.type?"ATAPI":"ATA",info.size/2);
+		_PUTSTR(console,s);
+	}
+	else
+	{
+		_PUTSTR(console,"(None)\n");
+	}
 
-void process_forward(void)
-{
-	#if DEBUGMODE
-		return;
-	#endif
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	int _process=binfo->scrnx/2-320/2+60+process;
-	boxfill(binfo->vram,binfo->scrnx,_process,binfo->scrny/2-240/2+200,_process+(200/PROCESS_SUM),binfo->scrny/2-240/2+220,PROCESS_COLOR);
-	process+=200/PROCESS_SUM;
+	_PUTSTR(console,"\t\tSec. Master\t");
+	get_ide_info(1,0,&info);
+	if(info.reserved)
+	{
+		sprintf(s,"%s [%s,%dKB]\n",info.name,info.type?"ATAPI":"ATA",info.size/2);
+		_PUTSTR(console,s);
+	}
+	else
+	{
+		_PUTSTR(console,"(None)\n");
+	}
+
+	_PUTSTR(console,"\t\tSec. Slave\t");
+	get_ide_info(1,1,&info);
+	if(info.reserved)
+	{
+		sprintf(s,"%s [%s,%dKB]\n",info.name,info.type?"ATAPI":"ATA",info.size/2);
+		_PUTSTR(console,s);
+	}
+	else
+	{
+		_PUTSTR(console,"(None)\n");
+	}
+	//_PUTSTR(console,s);
+
 }
 
 sheet_t *sht_mouse;
@@ -169,7 +238,7 @@ void taskc_main(void)
 							sht = global_shtctl->sheets[i];
 							x=mouse_x-sht->vx0;
 							y=mouse_y-sht->vy0;
-							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize && (sht->window!=NULL || sht->movable))
+							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize && (sht->window!=0 || sht->movable) && !get_isfullscreen())
 							{
 								sheet_updown(sht,global_shtctl->top-1);
 								keywin=sht;
@@ -187,11 +256,18 @@ void taskc_main(void)
 									}
 									else
 									{
-										if(sht->window->task!=NULL)
-										{
-											task_remove(sht->window->task);
+										 if((sht->flags & 0x10) != 0)
+										 {
+										 	app_kill(sht);
+										 }
+										 else
+										 {
+											if(sht->window->task!=0)
+											{
+												task_remove(sht->window->task);
+											}
+											close_window(sht->window);
 										}
-										close_window(sht->window);
 									}
 								}
 								break;
@@ -247,11 +323,11 @@ void taskc_main(void)
 
 void taskb_main(void)
 {
-	task_t *task=task_now();
-	current_time_t *ctime=(current_time_t *)malloc(sizeof(current_time_t));
+	current_time_t *ctime=(current_time_t *)kmalloc(sizeof(current_time_t));
 	int year,month,day,hour,minute,second;
 	char iWeek_str[10],result[60];
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+	int _year=0,_month=0,_day=0,_hour=0,_minute=0,_second=0;
 	for(;;)
 	{
 		get_current_time(ctime);
@@ -261,6 +337,11 @@ void taskb_main(void)
 		hour=ctime->hour;
 		minute=ctime->min;
 		second=ctime->sec;
+		if(_year==year && _month==month && _day==day && _hour==hour && _minute==minute && _second==second)
+		{
+			continue;
+		}
+
 		if(month==1 || month==2)
 		{
 			month+=12;
@@ -287,23 +368,10 @@ void taskb_main(void)
 
 void log(char *s)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	if(DEBUGMODE)
-	{
-		krnlcons_putstr(s);
-		krnlcons_putchar('\n');
-	}
+	krnlcons_putstr(s);
+	krnlcons_putchar('\n');
 }
 
-void log_cn(char *s)
-{
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	if(DEBUGMODE)
-	{
-		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,16,PROCESS_BACKCOLOR);
-		putstr_ascii_lmode(binfo->vram,binfo->scrnx,0,0,0xFFFFFF,s,1);
-	}
-}
 
 void ready_system(void);
 
@@ -311,9 +379,7 @@ void krnlc_main(void)
 {
 
 	
-
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	int i,j;
 	//int mmx=-1,mmy=-1,mmx2=0,x,y;
 	//int new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0;
 	uint32_t memtotal;
@@ -322,19 +388,9 @@ void krnlc_main(void)
 	shtctl_t *shtctl;
 	sheet_t *sht_back;
 	uint32_t *buf_back;
-	sheet_t *sht;
 	console_t *console;
 	
-	#if !DEBUGMODE
-		boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx,binfo->scrny,PROCESS_BACKCOLOR);
-		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2-5,binfo->scrny/2-240/2-5,binfo->scrnx/2+320/2-5,binfo->scrny/2+240/2-5,0x848484);
-		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2,binfo->scrny/2-240/2,binfo->scrnx/2+320/2,binfo->scrny/2+240/2,0xFFFFFF);
-		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+58,binfo->scrny/2-240/2+198,binfo->scrnx/2-320/2+262,binfo->scrny/2-240/2+222,0x000000);
-		boxfill(binfo->vram,binfo->scrnx,binfo->scrnx/2-320/2+60,binfo->scrny/2-240/2+200,binfo->scrnx/2-320/2+260,binfo->scrny/2-240/2+220,0xC6C6C6);
-		putstr_ascii_lmode(binfo->vram,binfo->scrnx,binfo->scrnx/2-16*8/2,binfo->scrny/2-240/2+180,0,"Starting Neumann",0);
-	#else
-		krnlcons_display();
-	#endif
+	krnlcons_display();
 
 	// boxfill(binfo->vram,binfo->scrnx,20,20,300,300,0xFF0000);
 	// boxfill(binfo->vram,binfo->scrnx,40,40,320,320,0x00FF00);
@@ -344,26 +400,30 @@ void krnlc_main(void)
 	log("Now initializing system...");
 
 	log("Initializing GDT and IDT...");
-	init_gdtidt();process_forward();
+	init_gdtidt();
 
 	
 
 	log("Initializing Serial Port...");
 	init_com();
-	process_forward();
+	
 
 	log("Initializing PS/2 Keyboard...");
-	init_keyboard();process_forward();
+	init_keyboard();
 
 	log("Initializing PS/2 Mouse...");
-	init_ps2mouse();process_forward();
+	init_ps2mouse();
 	
 	//for(;;);
 
 	log("Initializing Memory...");
-	memtotal=init_mem();process_forward();
-	
+	memtotal=init_mem();
+
 	sprintf(s,"INFO:Memory Total:%dMB",memtotal/1024/1024);
+	log(s);
+	
+	void *test_buf=kmalloc(20);
+	sprintf(s,"INFO:test_buf at %p\n",test_buf);
 	log(s);
 
 	//sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
@@ -372,118 +432,155 @@ void krnlc_main(void)
 	
 	binfo->memtotal=memtotal;
 	
+
 	//putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
+	log("Initializing Double Buffer...");
+	init_dbuffer();
 	
 
 	log("Initializing Sheet...");
 	
 	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
 	global_shtctl=shtctl;
-	process_forward();
+	
 	sht_back  = sheet_alloc(shtctl);
-    buf_back  = (uint32_t*) malloc(sizeof(uint32_t)*binfo->scrnx * binfo->scrny);
+    buf_back  = (uint32_t*) kmalloc(sizeof(uint32_t)*binfo->scrnx * binfo->scrny);
     sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny,-1);
 	global_sht_back=sht_back;
 	global_buf_back=buf_back;
 
-	process_forward();
+	log("Initializing PCI...");
+	pci_init();
+	sprintf(s,"INFO:PCI devices total:%d",count_pci_device());
+	log(s);
 
+
+	log("Initializing VDISK...");
+	vdisk_init();
+
+
+	log("Initializing FDC...");
+	int fdc_version;
+	fdc_version=fdc_init();
+	if(fdc_version==-1)
+	{
+		krnlcons_putstr_color("Warning:FDC not found.\n",0xFFFFFF,0x000000);
+	}
+	else if(fdc_version==-2)
+	{
+		krnlcons_putstr_color("Warning:FDC timeout.\n",0xFFFFFF,0x000000);
+	}
+	else
+	{
+		sprintf(s,"FDC Version:0x%x",fdc_version);
+		log(s);
+	}
+
+	log("Initializing IDE...");
+	init_ide();
+
+	log("Initializing null & zero device...");
+	init_nullzero();
+
+	log("Initializing VFS...");
+	vfs_init();
+
+
+	log("Registering file system...");
+	krnlcons_putstr_color("Device File system...",0xFFFFFF,0x000000);
+	devfs_regist();
+	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
+
+	krnlcons_putstr_color("FAT...",0xFFFFFF,0x000000);
+	fatfs_regist();
+	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
+
+	// krnlcons_putstr_color("ISO9660...",0xFFFFFF,0x000000);
+	// iso9660_regist();
+	// krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
 	
+	log("\n");
 
 	log("Initializing Multi Task...");
 	task_t *task_a=task_init();
-	process_forward();
 
 	log("Initializing Timer...");
 	init_timer(100);
-	process_forward();
+	
 
 	log("Starting Interrupt...");
-	asm_sti();process_forward();
+	asm_sti();
+	
 
 	log("Initializing FPU...");
 	if(!init_fpu())
 	{
 		log("Warning:FPU is not found!");
 	}
-	process_forward();
 
-	log("Initializing PCI...");
-	pci_init();
-	sprintf(s,"INFO:PCI devices total:%d",count_pci_device());
-	log(s);
-	process_forward();
+	if(vfs_do_search(vfs_open("/dev"), "hdb"))
+	{
+		log("Mount:/dev/hdb => /");
+		vfs_mount("/dev/hdb", vfs_open("/"));
+	}
+	
 	
 
 	log("Loading Font...");
-	fileinfo_t *finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
-	char *value=(char *)malloc(sizeof(char)*10);
-	if(read_ini("neumann.ini","System","load_hzk16",value)==0)
+	char *value=(char *)kmalloc(sizeof(char)*10);
+	vfs_node_t node;
+	if(read_ini("/config/neumann.ini","System","load_hzk16",value)==0)
 	{
-		if(fat16_open_file(finfo,"hzk16.bin")==0 && strcmp(value,"true")==0)
+		node=vfs_open("/resource/font/hzk16.bin");
+		if(node!=0 && strcmp(value,"true")==0)
 		{
 			//成功打开
-			binfo->hzk16=(char *)malloc(sizeof(char)*0x5d5d*32);
+			binfo->hzk16=(char *)kmalloc(node->size+5);
 			task_a->langmode=1;
-			fat16_read_file(finfo,binfo->hzk16);
+			vfs_read(node,binfo->hzk16,0,node->size);
 		}
 		else
 		{
 			//文件不存在
-			binfo->hzk16=NULL;
+			binfo->hzk16=0;
 			task_a->langmode=0;
 		}
 	}
 	else
 	{
 		//无法读出配置文件
-		binfo->hzk16=NULL;
+		binfo->hzk16=0;
 	}
 
-	if(read_ini("neumann.ini","System","load_hzk16f",value)==0)
+	if(read_ini("/config/neumann.ini","System","load_hzk16f",value)==0)
 	{
-		if(fat16_open_file(finfo,"hzk16f.bin")==0  && strcmp(value,"true")==0)
+		node=vfs_open("/resource/font/hzk16f.bin");
+		if(node!=0 && strcmp(value,"true")==0)
 		{
 			//成功打开
-			binfo->hzk16f=(char *)malloc(sizeof(char)*0x5d5d*32);
-			if(binfo->hzk16==NULL)
+			binfo->hzk16f=(char *)kmalloc(node->size+5);
+			if(binfo->hzk16==0)
 			{
 				task_a->langmode=2;
 			}
-			fat16_read_file(finfo,binfo->hzk16f);
+			vfs_read(node,binfo->hzk16f,0,node->size);
 		}
 		else
 		{
 			//文件不存在
-			binfo->hzk16f=NULL;
-			if(binfo->hzk16!=NULL)
-			{
-				task_a->langmode=1;
-			}
-			else
-			{
-				task_a->langmode=0;
-			}
+			binfo->hzk16f=0;
+			task_a->langmode=0;
 		}
 	}
 	else
 	{
 		//无法读出配置文件
-		binfo->hzk16f=NULL;
-		if(binfo->hzk16!=NULL)
-		{
-			task_a->langmode=1;
-		}
-		else
-		{
-			task_a->langmode=0;
-		}
+		binfo->hzk16f=0;
 	}
-	free(finfo);
-	free(value);
-	process_forward();	
 
+	kfree(value);
+		
 	
 	log("Benching CPU...");
 	uint32_t base_count=benchcpu();
@@ -492,13 +589,24 @@ void krnlc_main(void)
 	log(s);
 
 	log("System is ready.");
-
 	
-	#if DEBUGMODE
 	
-	print_pcinfo(NULL);
+	// vdisk_print();
+	// char *vdisk_buf=kmalloc(2048);
+	// int status=rw_vdisk(2,0,vdisk_buf,1,1);z
+	// if(status==0)
+	// {
+	// 	krnlcons_putstr("Failed.\n");
+	// }
+	// for(int i=0;i<512;i++)
+	// {
+	// 	sprintf(s,"0x%02x ",vdisk_buf[i]&0xff);
+	// 	krnlcons_putstr(s);
+	// }
+	// for(;;);
 
-	#endif
+	print_pcinfo(0);
+
 
 	//for(;;);
 
@@ -515,7 +623,7 @@ void krnlc_main(void)
 	
 	
 
-	buf_mouse=(uint32_t *)malloc(sizeof(uint32_t)*24*24);
+	buf_mouse=(uint32_t *)kmalloc(sizeof(uint32_t)*24*24);
 	draw_mouse(buf_mouse);
 	
 
@@ -533,7 +641,7 @@ void krnlc_main(void)
 	sheet_updown(sht_mouse,  1);
 
 	//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
-	
+
 	//使其能够处理鼠标与键盘
 	task_t *task_c=create_kernel_task(taskc_main);
 	task_run(task_c);
@@ -541,31 +649,28 @@ void krnlc_main(void)
 	ready_system();//准备系统
 
 
-	console=open_console();
-	
-
-
-	int _free,__free;
-
 	task_t *task_b=create_kernel_task(taskb_main);
 	task_run(task_b);
 
 	ime_init();
 
+	
+
+
+	if(binfo->hzk16==0 && binfo->hzk16f==0)warn_message("Chinese character library loading failed! Some Chinese characters may become garbled.","Chinese Font Library Not Loaded");
+	if(binfo->hzk16==0 && binfo->hzk16f!=0)warn_message("简体中文字库(HZK16.BIN)无法加载！","字库未加载");
+	if(binfo->hzk16!=0 && binfo->hzk16f==0)warn_message("繁体中文字库(HZK16F.BIN)无法加载！","字库未加载");
+	
+	console=open_console();
+
 	keywin=console->window->sheet;
-
-
-	if(binfo->hzk16==NULL && binfo->hzk16f==NULL)warn_message("Chinese character library loading failed! Some Chinese characters may become garbled.","Chinese Font Library Not Loaded");
-	if(binfo->hzk16==NULL && binfo->hzk16f!=NULL)warn_message("简体中文字库(HZK16.BIN)无法加载！","字库未加载");
-	if(binfo->hzk16!=NULL && binfo->hzk16f==NULL)warn_message("繁体中文字库(HZK16F.BIN)无法加载！","字库未加载");
-	
-	
 
 	for(;;);//悬挂
 }
 
 void ready_system()
 {
-	//create_window("准备中",300,16*8+18,-1,0);
-	//while(1);
+	// window_t *win=create_window("Login",300,16*8+18,-1,0);
+
+	// while(1);
 }

@@ -52,6 +52,7 @@ uint32_t free_space_total(void)
 {
 	memman_t *man=(memman_t *)MEMMAN_ADDR;
 	uint32_t i, t = 0;
+    char s[30];
 	for (i = 0; i < man->frees; i++) {
 		t += man->free[i].size;
 	}
@@ -139,7 +140,7 @@ static int memman_free(memman_t *man, uint32_t addr, uint32_t size)
 
 
 
-void *malloc(uint32_t size)
+void *kmalloc(uint32_t size)
 {
     uint32_t addr;
     memman_t *memman = (memman_t *) MEMMAN_ADDR;
@@ -153,22 +154,22 @@ void *malloc(uint32_t size)
     return (void *) p;
 }
 
-void *realloc(void *buffer, int size)
+void *krealloc(void *buffer, int size)
 {
     void *res = NULL;
-    if (!buffer) return malloc(size); // buffer为NULL，则realloc相当于malloc
+    if (!buffer) return kmalloc(size); // buffer为NULL，则realloc相当于malloc
     if (!size) { // size为NULL，则realloc相当于free
-        free(buffer);
+        kfree(buffer);
         return NULL;
     }
     // 否则实现扩容
-    res = malloc(size); // 分配新的缓冲区
+    res = kmalloc(size); // 分配新的缓冲区
     memcpy(res, buffer, size); // 将原缓冲区内容复制过去
-    free(buffer); // 释放原缓冲区
+    kfree(buffer); // 释放原缓冲区
     return res; // 返回新缓冲区
 }
 
-void free(void *p)
+void kfree(void *p)
 {
     char *q = (char *) p;
     int size = 0;
@@ -193,6 +194,5 @@ uint32_t init_mem(void)
 	memman_init(man);
 
 	memman_free(man, 0x400000, memtotal - 0x400000);
-	
 	return memtotal;
 }

@@ -19,9 +19,9 @@ Key2=value2
 #include <stddef.h>
 #include <string.h>
 #include <mm.h>
-#include <fat16.h>
 #include <console.h>
 #include <task.h>
+#include <syscall.h>
 
 char* read_line(const char* str, int line_number)
 {
@@ -40,7 +40,7 @@ char* read_line(const char* str, int line_number)
         if(current_line==line_number)
         {
             len = next - current;
-            line=(char *)malloc(sizeof(char)*(len+1));
+            line=(char *)kmalloc(sizeof(char)*(len+1));
             strncpy(line,current,len);
             line[len]=0;
             break;
@@ -69,8 +69,8 @@ int read_ini_buf(char *buf,char* section,char* key,char *value)
 {
     int lines=countLines(buf),i,found_section;
     char *line,*section_tmp,*key_tmp;
-    section_tmp=(char *)malloc(sizeof(char)*(strlen(section)+3));
-    key_tmp=(char *)malloc(sizeof(char)*(strlen(key)+2));
+    section_tmp=(char *)kmalloc(sizeof(char)*(strlen(section)+3));
+    key_tmp=(char *)kmalloc(sizeof(char)*(strlen(key)+2));
     sprintf(section_tmp,"[%s]",section);
     sprintf(key_tmp,"%s=",key);
     //console_putstr(task_now()->window->console,section_tmp);
@@ -79,7 +79,7 @@ int read_ini_buf(char *buf,char* section,char* key,char *value)
         line=read_line(buf,i);
         if(line[0]==';')//注释
         {
-            free(line);
+            kfree(line);
             continue;
         }
         if(strcmp(line,section_tmp)==0)
@@ -96,34 +96,34 @@ int read_ini_buf(char *buf,char* section,char* key,char *value)
             {
                 //console_putstr(task_now()->window->console,line+strlen(key_tmp));
                 strcpy(value,line+strlen(key_tmp));
-                free(section_tmp);
-                free(key_tmp);
+                kfree(section_tmp);
+                kfree(key_tmp);
                 return 0;
             }
         }
-        free(line);
+        kfree(line);
     }
-    free(section_tmp);
-    free(key_tmp);
+    kfree(section_tmp);
+    kfree(key_tmp);
     //console_putstr(task_now()->window->console,"Not Found");
     return -1;
 }
 
 int read_ini(char *filename,char* section,char* key,char *value)
 {
-    fileinfo_t *finfo=(fileinfo_t *)malloc(sizeof(fileinfo_t));
-    char *buf,retvalue;
-    if(fat16_open_file(finfo,filename)!=0)
+    int retvalue;
+    char *buf;
+    vfs_node_t node;
+    node=vfs_open(filename);
+    if(node==-1)
     {
-        free(finfo);
-        value=NULL;
-        return ;
+        //value=NULL;
+        return -1;
     }
-    buf=(char *)malloc(sizeof(char)*(finfo->size+5));
-    fat16_read_file(finfo,buf);
+    buf=(char *)kmalloc(node->size+5);
+    vfs_read(node,buf,0,node->size);
     retvalue=read_ini_buf(buf,section,key,value);
-    free(buf);
-    free(finfo);
+    kfree(buf);
 
     return retvalue;
 }

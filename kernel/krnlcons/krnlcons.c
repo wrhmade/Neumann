@@ -9,6 +9,7 @@ Copyright W24 Studio
 #include <graphic.h>
 #include <macro.h>
 #include <string.h>
+#include <dbuffer.h>
 
 static int krnlcons_cx,krnlcons_cy;
 struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
@@ -19,6 +20,7 @@ int FORTCOLOR=0xAAAAAA;
 void krnlcons_display()
 {
 	krnlcons_cleanscreen();
+	dbuffer_refresh();
 }
 
 void krnlcons_showcur()
@@ -38,6 +40,7 @@ void krnlcons_showcur()
 			}
 		}
 	}
+	dbuffer_refresh();
 	//boxfill(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,krnlcons_cx+7,krnlcons_cy+15,FORTCOLOR);
 }
 
@@ -46,6 +49,7 @@ void krnlcons_cleanscreen()
 	boxfill(binfo->vram,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,BACKCOLOR);
 	krnlcons_cx=krnlcons_cy=0;
 	krnlcons_showcur();
+	dbuffer_refresh();
 }
 
 void krnlcons_newline()
@@ -68,6 +72,7 @@ void krnlcons_newline()
 		krnlcons_cy+=16;
 		krnlcons_cx=0;
 	}
+	dbuffer_refresh();
 }
 
 void krnlcons_putchar_color(char c,int cc,int bc)
@@ -97,6 +102,7 @@ void krnlcons_putchar_color(char c,int cc,int bc)
 		krnlcons_newline();
 	}
 	krnlcons_showcur();
+	dbuffer_refresh();
 }
 
 void krnlcons_putchar_color_nomove(char c,int cc,int bc)
@@ -125,6 +131,7 @@ void krnlcons_putchar_color_nomove(char c,int cc,int bc)
 		krnlcons_newline();
 	}
 	krnlcons_showcur();
+	dbuffer_refresh();
 }
 
 void krnlcons_putchar(char c)
@@ -158,9 +165,11 @@ void krnlcons_putstr_color(char *s,int cc,int cb)
 void krnlcons_change_backcolor(int c)
 {
 	BACKCOLOR=c;
+	dbuffer_refresh();
 }
 
 void krnlcons_change_fortcolor(int c)
 {
 	FORTCOLOR=c;
+	dbuffer_refresh();
 }

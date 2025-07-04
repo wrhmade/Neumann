@@ -8,6 +8,8 @@ Copyright W24 Studio
 #include <io.h>
 #include <timer.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 void wait_lpt_ready()
 {
     while(!io_in8(LPT1_PORT_STATUS)&0x80)

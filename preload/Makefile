@@ -13,7 +13,7 @@ default:
 	$(MAKE) -C fs
 	$(MAKE) -C cmos
 	$(MAKE) -C hd
-	$(LD) -s -Ttext 0x20000 -o preload.bin $(OBJS) -e entry
+	$(LD) -s -Ttext 0x10000 -o preload.bin $(OBJS) -e entry
 
 clean:
 	$(MAKE) -C base clean

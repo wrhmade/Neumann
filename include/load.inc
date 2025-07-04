@@ -7,4 +7,4 @@ BaseOfKernelFile            equ 08000h ; Kernel的基址
 OffsetOfKernelFile          equ 0h  ; Kernel的偏移
 
 BaseOfKernelFilePhyAddr     equ BaseOfKernelFile * 10h ; Kernel被装载到的物理地址
-KernelEntryPointPhyAddr     equ 0x20000; Kernel入口点，一定要与编译命令一致！！！
+KernelEntryPointPhyAddr     equ 0x10000; Kernel入口点，一定要与编译命令一致！！！

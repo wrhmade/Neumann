@@ -1,7 +1,7 @@
 TOOLPATH=../../../tools/
 include ../../config.txt
 
-OBJS_API =	api001.obj api002.obj api003.obj api004.obj api005.obj api006.obj api007.obj api008.obj api009.obj api010.obj
+OBJS_API =	apilib.obj
 
 %.obj:%.asm
 	$(NASM) -f $(NASM_FORMAT) $*.asm -o $*.obj

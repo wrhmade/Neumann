@@ -6,6 +6,9 @@ Copyright W24 Studio
 #include <string.h>
 #include <stdint.h> 
 #include <stddef.h> 
+#include <limits.h>
+#include <errno.h>
+#include <mm.h>
 
 void *memset(void *dst_, uint8_t value, uint32_t size)
 {
@@ -109,17 +112,21 @@ char* strstr(const char* str1, const char* str2)
     return NULL; // 没有找到匹配的子字符串
 }
 
-char* strncpy(char* dest, const char* src, size_t n)
+char *strcat(char *dst_, const char *src_)
 {
-    size_t i;
-    for (i = 0; i < n && src[i] != '\0'; i++) {
-        dest[i] = src[i];
-    }
-    // 如果源字符串短于n，则目标字符串应以'\0'结尾
-    for (; i < n; i++) {
-        dest[i] = '\0';
-    }
-    return dest;
+    char *str = dst_;
+    while (*str++);
+    --str;
+    while((*str++ = *src_++));
+    return dst_;
+}
+
+char *strncpy(char *dst_, const char *src_, int n)
+{
+    char *str = dst_;
+    while (n && (*dst_++ = *src_++)) n--;
+    if (n) while (n--) *dst_++ = '\0';
+    return str;
 }
 
 char *strtok(char *str, const char *delim)
@@ -160,4 +167,140 @@ char *strtok(char *str, const char *delim)
  
     return start;
 }
- 
+
+long int strtol(const char *nptr, char **endptr, int base) {
+    const char *s = nptr;
+    long int result = 0;
+    unsigned long int limit;
+    int negative = 0;
+
+    // 跳过前导空格
+    while (*s == ' ' || *s == '\t') {
+        s++;
+    }
+
+    // 处理符号
+    if (*s == '-' || *s == '+') {
+        negative = (*s == '-');
+        s++;
+    }
+
+    // 处理基数
+    if (base == 0) {
+        if (*s == '0') {
+            if (s[1] == 'x' || s[1] == 'X') {
+                base = 16;
+                s += 2;
+            } else {
+                base = 8;
+                s++;
+            }
+        } else {
+            base = 10;
+        }
+    } else if (base < 2 || base > 36) {
+        return -1;
+    }
+
+    // 计算转换结果
+    limit = negative ? LONG_MIN : LONG_MAX;
+    while (*s >= '0' && *s <= '9' ||
+           (*s >= 'a' && *s <= 'z') ||
+           (*s >= 'A' && *s <= 'Z')) {
+        int digit = *s - '0';
+        if (*s >= 'a' || *s >= 'A') {
+            digit += 10 - (*s < 'a');
+        }
+        if (digit >= base) {
+            break;
+        }
+        if (result < (limit + digit) / base) {
+            return negative ? LONG_MIN : LONG_MAX;
+        }
+        result = result * base + digit;
+        s++;
+    }
+
+    // 设置结束指针
+    if (endptr) {
+        *endptr = (char *)s;
+    }
+
+    return negative ? -result : result;
+}
+
+/* 删除字符串中指定位置的字符 */
+void delete_char(char *str, int pos)
+{
+	int i;
+	for (i = pos; i < strlen(str); i++) {
+		str[i] = str[i + 1];
+	}
+}
+
+/* 在字符串的指定位置插入一个字符 */
+void insert_char(char *str, int pos, char ch)
+{
+	int i;
+	for (i = strlen(str); i >= pos; i--) {
+		str[i + 1] = str[i];
+	}
+	str[pos] = ch;
+}
+
+/* 在字符串的指定位置插入另一个字符串 */
+void insert_str(char *str, char *insert_str, int pos)
+{
+	for (int i = 0; i < strlen(insert_str); i++) {
+		insert_char(str, pos + i, insert_str[i]);
+	}
+}
+
+/* 将字符串中的所有字母转换为大写 */
+char *strupr(char *src)
+{
+	while (*src != '\0')
+	{
+		if (*src >= 'a' && *src <= 'z')
+			*src -= 32;
+		src++;
+	}
+	return src;
+}
+
+/* 将字符串中的所有字母转换为小写 */
+char *strlwr(char *src)
+{
+	while (*src != '\0')
+	{
+		if (*src > 'A' && *src <= 'Z'){
+			//*src += 0x20; 
+			*src += 32;
+		}
+		src++;
+	}
+	return src;
+}
+
+/* 拷贝字符串副本并返回 */
+void *strdup(const char *s)
+{
+	size_t len = strlen(s) + 1;
+	void *p = (void *)kmalloc(len);
+	if (p != 0) memcpy(p, (uint8_t *)s, len);
+	return p;
+}
+
+int streq(char *a,char *b)
+{
+    return strcmp(a,b)==0;
+}
+
+char *strchrnul(const char* s, int c)
+{
+	char* p = (char*)s;
+	while (*p && *p != (char)c) {
+		p++;
+	}
+	return p;
+}

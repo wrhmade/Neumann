@@ -11,4 +11,5 @@ void asm_cli(void);
 void asm_sti(void);
 void asm_stihlt(void);
 void start_app(int new_eip, int new_cs, int new_esp, int new_ss, int *esp0);
+void asm_end_app(void);
 #endif

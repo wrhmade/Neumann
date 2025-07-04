@@ -23,6 +23,8 @@ void fault_process(registers_t regs)
     krnlcons_display();
 
     krnlcons_change_backcolor(0x0000AA);
+	//不设置为黑屏
+	krnlcons_change_fortcolor(0xffffff);
     krnlcons_cleanscreen();
     krnlcons_putstr("Your system is currently experiencing some issues, which are preventing you from continuing to use it. If this is your first time encountering this issue, please force a restart. If you frequently encounter this issue, consider whether there is a problem with your computer or system.\n");
     krnlcons_putstr("Here are some technical information that can help you solve this error:\n");
@@ -147,9 +149,24 @@ void fault_process(registers_t regs)
     }
 
     serial_putstr("\nSystem Halted.");
+	print_stack_trace();
     for(;;)
     {
         
         asm_hlt();
+    }
+}
+
+void print_stack_trace()
+{
+	krnlcons_putstr("Callbacks:\n");
+    uint32_t *ebp, *eip;
+	char s[200];
+    asm volatile ("mov %%ebp, %0" : "=r" (ebp));
+    while (ebp) {
+        eip = ebp + 1;
+		sprintf(s,"   0x%08x\n", *eip);
+        krnlcons_putstr(s);
+        ebp = (uint32_t*)*ebp;
     }
 }

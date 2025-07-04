@@ -21,6 +21,8 @@ vram equ 0x0ff6
 xsize dw 0
 ysize dw 0
 
+selece_option db 2
+
 welcome:
 	db "Neumann Operating System",13,10
 	db "Version 0.8 [Beta 6]",13,10
@@ -31,7 +33,7 @@ menu:
 	db "Please select a display mode:",13,10
 	db "1.VESA VBE  640 x 480  x 32bits [For 4 : 3 monitor]",13,10
 	db "2.VESA VBE  800 x 600  x 32bits [For 4 : 3 monitor]",13,10
-	db "3.VESA VBE 1024 x 768  x 32bits [For 4 : 3 monitor][Enter]",13,10
+	db "3.VESA VBE 1024 x 768  x 32bits [For 4 : 3 monitor]",13,10
 	db "4.VESA VBE 1280 x 1024 x 32bits [For 5 : 4 monitor]",13,10
     db "5.VESA VBE 1280 x 720  x 32bits [For 16: 9 monitor]",13,10
     db "6.VESA VBE 1600 x 900  x 32bits [For 16: 9 monitor]",13,10
@@ -45,12 +47,14 @@ vbe_not_support db "This resolution is not suitable for your computer. Please ch
 vga_driver db "Alternatively, can you use a VGA driver(Y/N,Selecting N will restart)?",0
 
 LABEL_START:
+
+
     mov ax, cs
     mov ds, ax
     mov es, ax ; 将ds es设置为cs的值（因为此时字符串和变量等存在代码段内）
     mov ss, ax ; 将堆栈段也初始化至cs
     mov sp, BaseOfStack ; 设置栈顶
-    
+
     mov dh, 0
     call DispStr ; Loading
  
@@ -148,6 +152,39 @@ LABEL_GOON_LOADING_FILE: ; 加载文件
     add bx, [BPB_BytsPerSec] ; 将bx指向下一个扇区开头
     jmp LABEL_GOON_LOADING_FILE ; 加载下一个扇区
 
+VIDEO_MEMORY_ADDR_SEG equ 0xb800
+
+menu_update:
+    mov ax,VIDEO_MEMORY_ADDR_SEG
+    mov gs,ax
+    mov cx,10
+    mov bx,0
+
+.l1:
+    push cx
+    mov di,801
+    mov ax,160
+    mul bx
+    add di,ax
+    mov ax,0
+    mov al,[selece_option]
+    cmp bx,ax
+    je .a
+    mov al,0x07
+    jmp .b
+.a:
+    mov al,0x70
+.b:
+    mov cx,51
+.l2:
+    mov byte[gs:di],al
+    add di,2
+    loop .l2
+    inc bx
+    pop cx
+    loop .l1
+    ret
+
 
 LABEL_FILE_LOADED:
  
@@ -160,38 +197,121 @@ LABEL_FILE_LOADED:
 
     call cls
 
+LABEL_MENU:
+
     mov si,welcome
     call putstr
     mov si,menu
     call putstr
-select_loop
-    mov ah,00h
+.l1:
+
+    call menu_update
+
+    mov ah,0
     int 16h
+
+    cmp ah,48h
+    jz .upkey
+    cmp ah,50h
+    jz .downkey
     cmp al,0dh
-    jz .vbe3
+    jz .done
     cmp al,"1"
-    jz .vbe1
+    jz .option1
     cmp al,"2"
-    jz .vbe2
+    jz .option2
     cmp al,"3"
-    jz .vbe3
+    jz .option3
     cmp al,"4"
-    jz .vbe4
+    jz .option4
     cmp al,"5"
-    jz .vbe5
+    jz .option5
     cmp al,"6"
-    jz .vbe6
+    jz .option6
     cmp al,"7"
-    jz .vbe7
+    jz .option7
     cmp al,"8"
-    jz .vbe8
+    jz .option8
     cmp al,"9"
-    jz reboot
+    jz .option9
     cmp al,"a"
+    jz .option10
+    jmp .l1
+
+.upkey:
+    mov ax,0
+    mov al,[selece_option]
+    cmp al,0
+    jz .l1
+    dec al
+    mov [selece_option],al
+    jmp .l1
+
+.downkey:
+    mov ax,0
+    mov al,[selece_option]
+    cmp al,9
+    jz .l1
+    inc al
+    mov [selece_option],al
+    jmp .l1
+
+.option1:
+    mov byte[selece_option],0
+    jmp .l1
+.option2:
+    mov byte[selece_option],1
+    jmp .l1
+.option3:
+    mov byte[selece_option],2
+    jmp .l1
+.option4:
+    mov byte[selece_option],3
+    jmp .l1
+.option5:
+    mov byte[selece_option],4
+    jmp .l1
+.option6:
+    mov byte[selece_option],5
+    jmp .l1
+.option7:
+    mov byte[selece_option],6
+    jmp .l1
+.option8:
+    mov byte[selece_option],7
+    jmp .l1
+.option9:
+    mov byte[selece_option],8
+    jmp .l1
+.option10:
+    mov byte[selece_option],9
+    jmp .l1
+
+
+
+.done:
+    mov al,[selece_option]
+    cmp al,0
+    jz .vbe1
+    cmp al,1
+    jz .vbe2
+    cmp al,2
+    jz .vbe3
+    cmp al,3
+    jz .vbe4
+    cmp al,4
+    jz .vbe5
+    cmp al,5
+    jz .vbe6
+    cmp al,6
+    jz .vbe7
+    cmp al,7
+    jz .vbe8
+    cmp al,8
+    jz reboot
+    cmp al,9
     jz shutdown
-    cmp al,"A"
-    jz shutdown
-    jmp select_loop
+
 .vbe1:
     mov word[xsize],640
     mov word[ysize],480
@@ -235,11 +355,9 @@ shutdown:
 	mov	bl,01h
 	mov	cx,0003h
 	int	15h
-	jmp select_loop
 
 reboot:
 	jmp 0xffff:0000
-	jmp select_loop
 
 
 LABLE_SETVBE:

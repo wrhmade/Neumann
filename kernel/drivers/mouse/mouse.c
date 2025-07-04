@@ -23,6 +23,8 @@ Copyright W24 Studio
 #define KEYCMD_WRITE_MODE		0x60
 #define KBC_MODE				0x47
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 void wait_KBC_sendready(void);
 
 int mouse_data0;
@@ -43,7 +45,7 @@ void ps2mouse_handler(registers_t regs)
 void init_ps2mouse(void)
 {
     //注册鼠标中断
-    register_interrupt_handler(IRQ12,ps2mouse_handler);
+    register_interrupt_handler(IRQ12,&ps2mouse_handler);
 
 
     //开启PS2鼠标

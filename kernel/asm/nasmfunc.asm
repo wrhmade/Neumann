@@ -4,6 +4,7 @@
 [BITS 32]
 GLOBAL asm_hlt,asm_cli,asm_sti,asm_stihlt
 GLOBAL start_app
+GLOBAL asm_end_app
 
 asm_hlt:
 	hlt
@@ -44,4 +45,9 @@ start_app: ; void start_app(int new_eip, int new_cs, int new_esp, int new_ss, in
     push ecx ; new_cs
     push eax ; new_eip
     retf ; 剩下的弹出的活交给 CPU 来完成
-    
+
+asm_end_app:
+    mov esp,[eax]
+    mov dword[eax+4],0
+    popad
+    ret

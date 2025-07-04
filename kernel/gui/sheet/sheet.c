@@ -11,6 +11,7 @@ Copyright W24 Studio
 #include <graphic.h>
 #include <string.h>
 #include <task.h>
+#include <dbuffer.h>
 
 void putstr_ascii_sheet(sheet_t *sht, int x, int y, uint32_t c, uint32_t b, char *s)
 {
@@ -39,15 +40,15 @@ shtctl_t *shtctl_init(unsigned int *vram, int xs, int ys)
 
     // 分配记忆图层控制变量的内存空间
     // sizeof(struct  Shtctl)：C语言会计算出该变量型所需的字节数
-    ctl = (shtctl_t *)malloc(sizeof(shtctl_t));
+    ctl = (shtctl_t *)kmalloc(sizeof(shtctl_t));
     if (ctl == 0)
     {
         goto error;
     }
-    ctl->map = (unsigned int *)malloc(xs * ys * sizeof(uint32_t));
+    ctl->map = (unsigned int *)kmalloc(xs * ys * sizeof(uint32_t));
     if (ctl->map == 0)
     {
-        free(ctl);
+        kfree(ctl);
         goto error;
     }
     ctl->vram = vram;
@@ -230,6 +231,7 @@ void sheet_refreshsub(shtctl_t *ctl, int vx0, int vy0, int vx1, int vy1, int h0,
             }
         }
     }
+    dbuffer_refresh();
     return;
 }
 

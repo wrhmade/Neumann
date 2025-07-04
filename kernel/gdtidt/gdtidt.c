@@ -8,6 +8,8 @@ Copyright W24 Studio
 #include <gdtidt.h>
 #include <string.h>
 #include <io.h>
+
+#pragma GCC optimize("00") //硬件处理不开优化
  
 extern void gdt_flush(uint32_t);
 extern void idt_flush(uint32_t);
@@ -62,7 +64,7 @@ static void init_gdt()
     gdt_flush((uint32_t) &gdt_ptr); // 刷新gdt
 }
 
-static void idt_set_gate(uint8_t num, uint32_t offset, uint16_t sel, uint8_t flags)
+void idt_set_gate(uint8_t num, uint32_t offset, uint16_t sel, uint8_t flags)
 {
     idt_entries[num].offset_low = offset & 0xFFFF;
     idt_entries[num].selector = sel;

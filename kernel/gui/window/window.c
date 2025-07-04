@@ -10,6 +10,8 @@ Copyright W24 Studio
 #include <string.h>
 #include <graphic.h>
 #include <task.h>
+#include <binfo.h>
+#include <macro.h>
 
 uint32_t WINDOW_COLOR=0xFAFAFA;
 uint32_t WINDOW_TITLE_COLOR=0x07689F;
@@ -37,17 +39,20 @@ void window_redraw()
 
 window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv,uint32_t close_btn)
 {
-    window_t *window=(window_t *)malloc(sizeof(window_t));
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    window_t *window=(window_t *)kmalloc(sizeof(window_t));
     sheet_t *sheet_window;
 	uint32_t *buf_window;
 	sheet_window=sheet_alloc(global_shtctl);
-	buf_window=(uint32_t *)malloc(sizeof(uint32_t)*xsize*ysize);
+	buf_window=(uint32_t *)kmalloc(sizeof(uint32_t)*xsize*ysize);
 	sheet_setbuf(sheet_window,buf_window,xsize,ysize,-1);
     window_init(window,sheet_window,xsize,ysize,title);
     window->close_btn=close_btn;
+    sheet_updown(window->sheet,-1);
     draw_window(window,0);
-	sheet_updown(window->sheet,1);
-	sheet_slide(window->sheet,100,100);
+    sheet_slide(window->sheet,300,300);
+	sheet_updown(window->sheet,global_shtctl->top);
+	//sheet_slide(window->sheet,(binfo->scrnx-xsize)/2,(binfo->scrny-ysize)/2);
     return window;
 }
 
@@ -93,7 +98,7 @@ void draw_window(window_t *window,int title_only)
         "................",
         "................"
     };
-    uint32_t *btn_close=(uint32_t *)malloc(sizeof(uint32_t)*16*16);
+    uint32_t *btn_close=(uint32_t *)kmalloc(sizeof(uint32_t)*16*16);
     int i,j;
     for(i=0;i<16;i++)
     {
@@ -136,13 +141,14 @@ void move_window(window_t *window,int x,int y)
 void close_window(window_t *window)
 {
     hide_window(window);
-    free(window->sheet->buf);
+    kfree(window->sheet->buf);
     sheet_free(window->sheet);
-    free(window);
+    kfree(window);
 }
 
 void window_settask(window_t *window,task_t* task)
 {
     window->task=task;
     task->window=window;
+    window->sheet->task=task;
 }

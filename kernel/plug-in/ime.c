@@ -12,12 +12,12 @@ Copyright W24 Studio
 #include <graphic.h>
 #include <binfo.h>
 #include <macro.h>
-#include <fat16.h>
 #include <message.h>
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <keyboard.h>
+#include <syscall.h>
 
 
 extern int shift_pressing,ctrl_pressing;
@@ -696,30 +696,30 @@ void ime_main()
 void ime_init()
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    fileinfo_t finfo;
 
-    status=(ime_status_t *)malloc(sizeof(ime_status_t));
+    status=(ime_status_t *)kmalloc(sizeof(ime_status_t));
     status->enabled=1;
     status->inputmode=0;
     
 
+    vfs_node_t node=vfs_open("/resource/ime/pymb.dat");
 
-    if(fat16_open_file(&finfo,"pymb.dat")!=0)
+    if(node==0)
     {
         status->enabled=0;
         error_message("无法加载拼音码表!","输入法错误");
         return;
     }
+    
+    status->mb=(char *)kmalloc(sizeof(char)*(node->size+5));
+    vfs_read(node,status->mb,0,node->size);
 
-    status->mb=(char *)malloc(sizeof(char)*(finfo.size+5));
-    fat16_read_file(&finfo,status->mb);
-
-    py_result=(chinese_t *)malloc(sizeof(chinese_t *)*390);
+    py_result=(chinese_t *)kmalloc(sizeof(chinese_t *)*390);
 
 
     ime_sheet=sheet_alloc(global_shtctl);
     ime_sheet->movable=1;//标记为可拖移
-    ime_shtbuf=(uint32_t *)malloc(sizeof(uint32_t)*232*16);
+    ime_shtbuf=(uint32_t *)kmalloc(sizeof(uint32_t)*232*16);
     sheet_setbuf(ime_sheet,ime_shtbuf,232,16,-1);
     boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0x808080);
 

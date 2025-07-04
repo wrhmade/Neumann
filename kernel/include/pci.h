@@ -73,7 +73,6 @@ typedef struct pci_bar_t
 
 typedef struct pci_device_t
 {
-    list_node_t node;
     u8 bus;
     u8 dev;
     u8 func;

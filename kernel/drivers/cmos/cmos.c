@@ -8,6 +8,8 @@ Copyright W24 Studio
 #include <stdint.h>
 #include <io.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 static uint8_t read_cmos(uint8_t p)
 {
     uint8_t data;

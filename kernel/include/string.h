@@ -19,6 +19,19 @@ int8_t strcmp(const char *a, const char *b);
 char *strchr(const char *str, const uint8_t ch);
 void bzero(void *dest, uint32_t len);
 char* strstr(const char* str1, const char* str2);
-char* strncpy(char* dest, const char* src, size_t n);
+char *strcat(char *dst_, const char *src_);
+char *strncpy(char *dst_, const char *src_, int n);
 char *strtok(char *str, const char *delim);
+long int strtol(const char *nptr, char **endptr, int base);
+
+
+void delete_char(char *str, int pos);
+void insert_char(char *str, int pos, char ch);
+void insert_str(char *str, char *insert_str, int pos);
+char *strupr(char *src);
+char *strlwr(char *src);
+void *strdup(const char *s);
+
+int streq(char *a,char *b);
+char *strchrnul(const char* s, int c);
 #endif

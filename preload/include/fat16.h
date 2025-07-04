@@ -6,6 +6,7 @@ Copyright W24 Studio
 
 #ifndef FAT16_H
 #define FAT16_H
+
 typedef struct FAT_BPB_HEADER {
     unsigned char BS_jmpBoot[3];
     unsigned char BS_OEMName[8];

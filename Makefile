@@ -5,26 +5,21 @@ default:
 	$(MAKE) $(IMAGENAME)
 
 $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
-	$(FTIMGCREATE) $(IMAGENAME) -t hd -size 80
-	$(FTFORMAT) $(IMAGENAME) -t hd -f fat16
-	$(FVDISK) loader/loader.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) preload/preload.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) kernel/kernel.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) kernel/font/HZK16.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) kernel/font/HZK16F.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) res/test.txt -o $(IMAGENAME) -f 0
-	$(FVDISK) res/neumann.ini -o $(IMAGENAME) -f 0
-	$(FVDISK) res/test.prg -o $(IMAGENAME) -f 0
-	$(FVDISK) res/print.txt -o $(IMAGENAME) -f 0
-	$(FVDISK) res/print2.txt -o $(IMAGENAME) -f 0
-	$(FVDISK) res/pymb.dat -o $(IMAGENAME) -f 0
-	$(FVDISK) res/themes/default.tme -o $(IMAGENAME) -f 0
-	$(FVDISK) res/themes/default.jpg -o $(IMAGENAME) -f 0
-	$(FVDISK) res/themes/newyear.tme -o $(IMAGENAME) -f 0
-	$(FVDISK) res/themes/newyear.jpg -o $(IMAGENAME) -f 0
-	$(FVDISK) apps/myapp/myapp.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) apps/newyear/newyear.bin -o $(IMAGENAME) -f 0
-	$(FVDISK) boot/boot.bin -o $(IMAGENAME) -s 0
+	$(FTIMAGE) $(IMAGENAME) -size 80 -bs boot/boot.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath loader/loader.bin -to -dstpath /loader.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath preload/preload.bin -to -dstpath /preload.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath kernel/kernel.bin -to -dstpath /kernel.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath kernel/font/HZK16.bin -to -dstpath /resource/font/HZK16.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath kernel/font/HZK16F.bin -to -dstpath /resource/font/HZK16F.bin
+	$(FTCOPY) $(IMAGENAME) -srcpath res/neumann.ini -to -dstpath /config/neumann.ini
+	$(FTCOPY) $(IMAGENAME) -srcpath res/pymb.dat -to -dstpath /resource/ime/pymb.dat
+	$(FTCOPY) $(IMAGENAME) -srcpath res/console.ini -to -dstpath /config/console.ini
+	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/default.tme -to -dstpath /resource/themes/default/default.tme
+	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/default.jpg -to -dstpath /resource/themes/default/default.jpg
+	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/summer.tme -to -dstpath /resource/themes/summer/summer.tme
+	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/summer.jpg -to -dstpath /resource/themes/summer/summer.jpg
+	$(FTCOPY) $(IMAGENAME) -srcpath apps/myapp/myapp.bin -to -dstpath /test/myapp.bin
+
 
 
 full:
@@ -55,7 +50,7 @@ fastbuild:
 
 
 run:
-	$(QEMU) -hda $(IMAGENAME) -m $(MEMORY_SIZE)
+	$(QEMU) -hda $(IMAGENAME) -m $(MEMORY_SIZE) -serial stdio
 
 to_vhd:
 	$(QEMU_IMG) convert -f raw -O vpc $(IMAGENAME) $(IMAGENAME_VHD)

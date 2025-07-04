@@ -17,7 +17,7 @@ Copyright W24 Studio
 extern int global_mousebtn,mouse_x,mouse_y;
 
 
-
+extern shtctl_t *global_shtctl;
 
 
 
@@ -26,6 +26,7 @@ void message_main()
 {
     task_t *task=task_now();
     window_t *window=task->window;
+    sheet_updown(window->sheet,global_shtctl->top-1);
     int i;
     beep(900000);
     sleep(10);
@@ -112,7 +113,7 @@ void error_message(char *content,char *title)
         putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-32/2,82,0x000000," OK ");
     }
 
-    uint32_t *error_icon_grap=(uint32_t)malloc(sizeof(uint32_t)*32*32);
+    uint32_t *error_icon_grap=(uint32_t)kmalloc(sizeof(uint32_t)*32*32);
     int x,y;
 
     for(y=0;y<32;y++)
@@ -144,7 +145,8 @@ void error_message(char *content,char *title)
     move_window(window,binfo->scrnx/2-window->xsize/2,binfo->scrny/2-window->ysize/2);
     show_window(window);
     task_run(task);
-    free(error_icon_grap);
+    kfree(error_icon_grap);
+    task_wait(task_pid(task));
 }
 
 void warn_message(char *content,char *title)
@@ -201,7 +203,7 @@ void warn_message(char *content,char *title)
         putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-32/2,82,0x000000," OK ");
     }
 
-    uint32_t *warn_icon_grap=(uint32_t)malloc(sizeof(uint32_t)*32*32);
+    uint32_t *warn_icon_grap=(uint32_t)kmalloc(sizeof(uint32_t)*32*32);
     int x,y;
 
     for(y=0;y<32;y++)
@@ -233,7 +235,8 @@ void warn_message(char *content,char *title)
     move_window(window,binfo->scrnx/2-window->xsize/2,binfo->scrny/2-window->ysize/2);
     show_window(window);
     task_run(task);
-    free(warn_icon_grap);
+    kfree(warn_icon_grap);
+    task_wait(task_pid(task));
 }
 
 void info_message(char *content,char *title)
@@ -289,7 +292,7 @@ void info_message(char *content,char *title)
         putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-32/2,82,0x000000," OK ");
     }
 
-    uint32_t *info_icon_grap=(uint32_t)malloc(sizeof(uint32_t)*32*32);
+    uint32_t *info_icon_grap=(uint32_t)kmalloc(sizeof(uint32_t)*32*32);
     int x,y;
 
     for(y=0;y<32;y++)
@@ -321,5 +324,6 @@ void info_message(char *content,char *title)
     move_window(window,binfo->scrnx/2-window->xsize/2,binfo->scrny/2-window->ysize/2);
     show_window(window);
     task_run(task);
-    free(info_icon_grap);
+    kfree(info_icon_grap);
+    task_wait(task_pid(task));
 }

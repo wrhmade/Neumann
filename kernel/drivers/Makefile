@@ -14,6 +14,11 @@ default:
 	$(MAKE) -C fpu
 	$(MAKE) -C cpu
 	$(MAKE) -C pci
+	$(MAKE) -C fdc
+	$(MAKE) -C dma
+	$(MAKE) -C dbuffer
+	$(MAKE) -C ide
+	$(MAKE) -C nullzero
 
 clean:
 	$(MAKE) -C io clean
@@ -28,3 +33,8 @@ clean:
 	$(MAKE) -C fpu clean
 	$(MAKE) -C cpu clean
 	$(MAKE) -C pci clean
+	$(MAKE) -C fdc clean
+	$(MAKE) -C dma clean
+	$(MAKE) -C dbuffer clean
+	$(MAKE) -C ide clean
+	$(MAKE) -C nullzero clean

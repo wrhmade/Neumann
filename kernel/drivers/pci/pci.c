@@ -277,8 +277,10 @@ static void pci_check_device(u8 bus, u8 dev)
         if (vendorid == 0 || vendorid == 0xFFFF)
             return;
 
-        pci_device_t *device = (pci_device_t *)malloc(sizeof(pci_device_t));
-        list_push(&pci_device_list, &device->node);
+        pci_device_t *device = (pci_device_t *)kmalloc(sizeof(pci_device_t));
+        //list_push(&pci_device_list, &device->node);
+        list_append(pci_device_list,device);
+        
         device->bus = bus;
         device->dev = dev;
         device->func = func;
@@ -304,10 +306,11 @@ static void pci_check_device(u8 bus, u8 dev)
 // 通过供应商/设备号查找设备
 pci_device_t *pci_find_device(u16 vendorid, u16 deviceid)
 {
-    list_t *list = &pci_device_list;
-    for (list_node_t *node = list->head.next; node != &list->tail; node = node->next)
+    int i;
+    for (i=0;i<list_length(pci_device_list);i++)
     {
-        pci_device_t *device = element_entry(pci_device_t, node, node);
+        pci_device_t *device = list_nth(pci_device_list,i)->data;
+        if(device==NULL)continue;
         if (device->vendorid != vendorid)
             continue;
         if (device->deviceid != deviceid)
@@ -320,11 +323,11 @@ pci_device_t *pci_find_device(u16 vendorid, u16 deviceid)
 // 通过类型查找设备
 pci_device_t *pci_find_device_by_class(u32 classcode)
 {
-    list_t *list = &pci_device_list;
-
-    for (list_node_t *node = list->head.next; node != &list->tail; node = node->next)
+    int i;
+    for (i=0;i<list_length(pci_device_list);i++)
     {
-        pci_device_t *device = element_entry(pci_device_t, node, node);
+        pci_device_t *device = list_nth(pci_device_list,i)->data;
+        if(device==NULL)continue;
         if (device->classcode == classcode)
             return device;
         if ((device->classcode & PCI_SUBCLASS_MASK) == classcode)
@@ -363,14 +366,14 @@ static void pci_enum_device()
 // 初始化 PCI 设备
 void pci_init()
 {
-    list_init(&pci_device_list);
+    pci_device_list=list_alloc(NULL);
     pci_enum_device();
 }
 
 // 获得PCI设备总量
 int count_pci_device()
 {
-    return list_size(&pci_device_list);
+    return list_length(pci_device_list);
 }
 
 void cmd_lspci(console_t *console)
@@ -387,11 +390,15 @@ void cmd_lspci(console_t *console)
     {
         console_putstr(console,"|Bus  Slot  Func  VendorID  DeviceID  ClassCode  Name\n");
     }
-	list_t *list = &pci_device_list;
+	
     uint32_t bus,slot,func,vendorid,deviceid,classcode;
-    for (list_node_t *node = list->head.next; node != &list->tail; node = node->next)
+    int i;
+    for (i=0;i<list_length(pci_device_list);i++)
     {
-        pci_device_t *device = element_entry(pci_device_t, node, node);
+        pci_device_t *device = list_nth(pci_device_list,i)->data;
+        if(device==NULL)continue;
+
+        
         bus=device->bus;
         slot=device->dev;
         func=device->func;

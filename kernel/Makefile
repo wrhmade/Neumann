@@ -4,9 +4,12 @@ include ../config.txt
 OBJS=asmhead/asmhead.obj main/main.obj asm/nasmfunc.obj gui/graphic/graphic.obj gui/desktop/desktop.obj font/font.obj gdtidt/gdtidt.obj gdtidt/gdtasm.obj \
 	int/int.obj int/intasm.obj lib/string/string.obj lib/sprintf/sprintf.obj drivers/io/io.obj drivers/mouse/mouse.obj drivers/keyboard/keyboard.obj fifo/fifo.obj \
 	drivers/keyboard/keymap.obj mm/mm.obj mm/mmasm.obj regctl/regctl.obj gui/sheet/sheet.obj gui/window/window.obj task/task.obj task/farjmp.obj drivers/timer/timer.obj \
-	drivers/buzzer/buzzer.obj user/console/console.obj fault/fault.obj drivers/hd/hd.obj drivers/cmos/cmos.obj fs/fat16.obj syscall/syscall.obj syscall/syscasm.obj \
-	plug-in/jpeg.obj plug-in/bmp.obj plug-in/ini.obj drivers/com/com.obj drivers/lpt/lpt.obj ELF/elf.obj plug-in/maths.obj user/message/message.obj plug-in/msdemo.obj \
-	plug-in/ime.obj krnlcons/krnlcons.obj drivers/fpu/fpu.obj drivers/cpu/cpu.obj list/list.obj drivers/pci/pci.obj exec/exec.obj gui/theme/theme.obj
+	drivers/buzzer/buzzer.obj user/console/console.obj fault/fault.obj drivers/hd/hd.obj drivers/cmos/cmos.obj syscall/syscall.obj syscall/syscasm.obj \
+	plug-in/ini.obj drivers/com/com.obj drivers/lpt/lpt.obj ELF/elf.obj user/message/message.obj plug-in/msdemo.obj \
+	plug-in/ime.obj krnlcons/krnlcons.obj drivers/fpu/fpu.obj drivers/cpu/cpu.obj drivers/pci/pci.obj exec/exec.obj gui/theme/theme.obj \
+	lib/math/math.obj disk/disk.obj disk/vdisk.obj drivers/fdc/fdc.obj drivers/dma/dma.obj fs/vfs.obj fs/devfs.obj fs/vfile.obj lib/data_structures/slist-strptr.obj \
+	lib/data_structures/rbtree-strptr.obj fs/fat.obj fs/fatfs/ff.obj fs/fatfs/ffsystem.obj fs/fatfs/ffunicode.obj fs/fatfs/diskio.obj\
+	user/fullscreen/fullscreen.obj drivers/dbuffer/dbuffer.obj drivers/ide/ide.obj fs/iso9660.obj drivers/nullzero/nullzero.obj
 	
 default:
 	$(MAKE) -C asmhead
@@ -29,9 +32,9 @@ default:
 	$(MAKE) -C ELF
 	$(MAKE) -C plug-in
 	$(MAKE) -C krnlcons
-	$(MAKE) -C list
 	$(MAKE) -C exec
-	$(LD) -s -Ttext 0x30400 -o kernel.bin $(OBJS) -e krnl_entry
+	$(MAKE) -C disk
+	$(LD) -Ttext 0x100000 -o kernel.bin $(OBJS) -e krnl_entry 
 
 clean:
 	$(MAKE) -C asmhead clean
@@ -54,8 +57,8 @@ clean:
 	$(MAKE) -C plug-in clean
 	$(MAKE) -C ELF clean
 	$(MAKE) -C krnlcons clean
-	$(MAKE) -C list clean
 	$(MAKE) -C exec clean
+	$(MAKE) -C disk clean
 	$(DEL) kernel.bin
 
 	

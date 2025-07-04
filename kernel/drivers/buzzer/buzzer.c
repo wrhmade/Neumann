@@ -7,6 +7,8 @@ Copyright W24 Studio
 #include <buzzer.h>
 #include <io.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 void beep(int freq)
 {
     int i;

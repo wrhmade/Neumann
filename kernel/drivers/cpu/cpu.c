@@ -7,6 +7,8 @@ Copyright W24 Studio
 #include <cpu.h>
 #include <stddef.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 // 检测是否支持 cpuid 指令
 bool cpu_check_cpuid()
 {

@@ -116,6 +116,7 @@ LABEL_GOON_LOADING_FILE: ; 加载文件
 LABEL_FILE_LOADED:
     mov dh, 1 ; 打印第 1 条消息（Ready.）
     call DispStr
+
     jmp BaseOfLoader:OffsetOfLoader ; 跳入Loader！
  
 wRootDirSizeForLoop dw RootDirSectors ; 查找loader的循环中将会用到

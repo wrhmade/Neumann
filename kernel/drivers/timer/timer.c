@@ -14,6 +14,8 @@ Copyright W24 Studio
 #include <macro.h>
 #include <graphic.h>
 
+#pragma GCC optimize("00") //硬件处理不开优化
+
 #define PIT_CTRL    0x0043
 #define PIT_CNT0    0x0040
 
@@ -53,8 +55,8 @@ void init_timer(uint32_t freq)
     io_out8(PIC0_IMR, 0xf8);
     io_out8(PIC1_IMR, 0xef);
 
-    register_interrupt_handler(IRQ0, &timer_callback); // 将时钟中断处理程序注册给IRQ框架
 
+    register_interrupt_handler(IRQ0, &timer_callback); // 将时钟中断处理程序注册给IRQ框架
 
     uint32_t divisor = 1193180 / freq;
 

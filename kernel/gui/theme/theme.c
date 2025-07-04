@@ -7,12 +7,12 @@ Copyright W24 Studio
 #include <theme.h>
 #include <stdint.h>
 #include <ini.h>
-#include <fat16.h>
 #include <stddef.h>
 #include <string.h>
 #include <binfo.h>
 #include <macro.h>
 #include <window.h>
+#include <vfs.h>
 
 extern uint32_t WINDOW_COLOR;
 extern uint32_t WINDOW_TITLE_COLOR;
@@ -67,7 +67,7 @@ int theme_set(char *themename,uint32_t *buf)
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
     char wtbc[30],wtfc[30],wbbc[30],wbfc[30],wp[30];
-    if(fat16_open_file(NULL,themename)!=0)
+    if(vfs_open(themename)==NULL)
     {
         return -1;
     }

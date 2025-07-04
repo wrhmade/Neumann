@@ -10,8 +10,6 @@ Copyright W24 Studio
 
 
 #define MEMMAN_ADDR 0x3c0000
-#define MEMMAN_FREES		4090
-
 #define MEMMAN_FREES 4090
 
 
@@ -32,4 +30,5 @@ uint32_t free_space_total(void);
 void *malloc(uint32_t size);
 void free(void *p);
 void *realloc(void *buffer, int size);
+uint32_t init_mem(void);
 #endif

@@ -16,30 +16,34 @@ Copyright W24 Studio
 #include <macro.h>
 #include <stdint.h>
 #include <hd.h>
-#include <fat16.h>
 #include <binfo.h>
 #include <macro.h>
 #include <ini.h>
 #include <lpt.h>
-#include <maths.h>
+#include <math.h>
 #include <message.h>
 #include <ELF.h>
 #include <pci.h>
 #include <theme.h>
 #include <desktop.h>
+#include <disk.h>
+#include <vfs.h>
+#include <vfile.h>
+#include <fullscreen.h>
+#include <timer.h>
 void console_main();
 
-static char commands[30][15]={"mem","exit","cls","newconsole","count","bootinfo","messtest","print",
-			"dir","dzero","msdemo","lspci","echo","mkfile","rdfile","wrfile","del","langmode","finfo","pcinfo",
-            "themeset"};
+static char commands[60][15]={"mem","exit","cls","newconsole","count","bootinfo","messtest","print",
+			"ls","mkdir","dzero","msdemo","lspci","echo","mkfile","rdfile","del","langmode","finfo","pcinfo",
+            "themeset","cd","fullscreen"};
 
-#define COMMAND_NOW 21 //命令数量
+#define COMMAND_NOW 22 //命令数量
 
 #define DEFAULT_COLOR 0xAAAAAA
 
 console_t *open_console(void)
 {
-    console_t *console=(console_t *)malloc(sizeof(console_t));
+    console_t *console=(console_t *)kmalloc(sizeof(console_t));
     window_t *window;
     task_t *task=task_now();
     if(task->langmode==0)
@@ -59,6 +63,7 @@ console_t *open_console(void)
     window->console=console;
     console->curx=console->cury=0;
     window->isconsole=1;
+    console->running_app=NULL;
     int i,j;
     for(i=0;i<80;i++)
     {
@@ -72,10 +77,14 @@ console_t *open_console(void)
 
 void close_console(console_t *console)
 {
+    if(console->running_app!=NULL)
+    {
+        task_remove(console->running_app);
+    }
     close_window(console->window);
     task_remove(console->window->task);
-    free(console->consbuf);
-    free(console);
+    kfree(console->consbuf);
+    kfree(console);
 }
 
 void console_refresh(console_t *console)
@@ -247,7 +256,7 @@ void console_cleanscreen(console_t *console)
 char *console_input(console_t *console,int len)
 {
     task_t *task=console->window->task;
-    char *str=(char *)malloc(sizeof(char)*(len+1));
+    char *str=(char *)kmalloc(sizeof(char)*(len+1));
     int i,index=0,line=0;
 
     for(;;)
@@ -295,6 +304,8 @@ char *console_input(console_t *console,int len)
     return str;
 }
 
+
+
 int console_getkey(console_t *console)
 {
     task_t *task=console->window->task;
@@ -310,6 +321,44 @@ int console_getkey(console_t *console)
     }
 }
 
+static int cmd_parse(char *cmd_str, char **argv, char token)
+{
+    int arg_idx = 0;
+    while (arg_idx < MAX_ARG_NR) {
+        argv[arg_idx] = NULL;
+        arg_idx++;
+    } // 开局先把上一个argv抹掉
+    char *next = cmd_str; // 下一个字符
+    int argc = 0; // 这就是要返回的argc了
+    while (*next) { // 循环到结束为止
+        if (*next != '"') {
+            while (*next == token) *next++; // 多个token就只保留第一个，windows cmd就是这么处理的
+            if (*next == 0) break; // 如果跳过完token之后结束了，那就直接退出
+            argv[argc] = next; // 将首指针赋值过去，从这里开始就是当前参数
+            while (*next && *next != token) next++; // 跳到下一个token
+        } else {
+            next++; // 跳过引号
+            argv[argc] = next; // 这里开始就是当前参数
+            while (*next && *next != '"') next++; // 跳到引号
+        }
+        if (*next) { // 如果这里有token字符
+            *next++ = 0; // 将当前token字符设为0（结束符），next后移一个
+        }
+        if (argc > MAX_ARG_NR) return -1; // 参数太多，超过上限了
+        argc++; // argc增一，如果最后一个字符是空格时不提前退出，argc会错误地被多加1
+    }
+    return argc;
+}
+
+
+static void console_put_prompt()
+{
+    char s[300];
+    task_t *task=task_now();
+    sprintf(s,"[%s]",task->work_dir);
+    console_putstr(task->window->console,s);
+}
+
 void console_main()
 {
     task_t *task=task_now();
@@ -321,27 +370,63 @@ void console_main()
     console_refresh(task->window->console);
 
     console_putstr_color(task->window->console,"Neumann Console\n\tCopyright(c) 2023-2025 W24 Studio & 71GN Deep Space\n\n",0xFFFFFF);
+        //console_putstr(task->window->console,"2");
+    char value[20];
+    int exist;
+    //cmd_run(task->window->console,"nsh.bin");
+
+    console_putstr_color(task->window->console,"Build-in shell\n",0x00FF00);
 
     char *sp;
 
     //cmd_run(task->window->console,"myapp.bin");
 
+    
 	for(;;)
 	{
-        console_putstr(task->window->console,"[Command]");
-
-        sp=console_input(task->window->console,80);
+        memset(task->window->console->cmdline,0,CMDLINE_MAXLEN);
+        
+        
+        console_put_prompt();
+        sp=console_input(task->window->console,CMDLINE_MAXLEN);
         cmd_run(task->window->console,sp);
-        free(sp);
+        kfree(sp);
 	}
+}
+
+static void get_execuable_file(char *cmdline,char *filename)
+{
+    char *p=cmdline,*q=filename;
+    while(*p!=0 && *p!=' ')
+    {
+        *q=*p;
+        p++;
+        q++;
+    }
+    *q=0;//结束
 }
 
 void cmd_run(console_t *console,char *cmdline)
 {
     task_t *task=task_now();
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    //console_putstr(console,cmdline);
     if(strcmp(cmdline,"mem")==0)
     {
         cmd_mem(console);
+    }
+    else if(strcmp(cmdline,"fdtest")==0)
+    {
+        char buffer[512];
+        for(int i=0;i<512;i++)
+        {
+            buffer[i]='A';
+        }
+        my_disk_write_device(DEVICE_FD,0,1,buffer);
+    }
+    else if(strcmp(cmdline,"fullscreen")==0)
+    {
+        fullscreen_show();
     }
     else if(strcmp(cmdline,"exit")==0)
     {
@@ -371,9 +456,13 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_print(console,cmdline+6);
     }
-    else if(strcmp(cmdline,"dir")==0)
+    else if(strncmp(cmdline,"cd ",3)==0)
     {
-        cmd_dir(console);
+        cmd_cd(console,cmdline+3);
+    }
+    else if(strcmp(cmdline,"ls")==0)
+    {
+        cmd_ls(console);
     }
     else if(strcmp(cmdline,"dzero")==0)
     {
@@ -396,9 +485,13 @@ void cmd_run(console_t *console,char *cmdline)
         console_putstr(console,cmdline+5);
         console_putchar(console,'\n');
     }
+    else if(strncmp(cmdline,"mkdir ",6)==0)
+    {
+        cmd_mkdir(console,cmdline+6);
+    }
     else if(strncmp(cmdline,"themeset ",9)==0)
     {
-        if(fat16_open_file(NULL,cmdline+9)==-1)
+        if(vfs_open(cmdline+9)==0)
         {
             if(task->langmode==0)
             {
@@ -416,12 +509,22 @@ void cmd_run(console_t *console,char *cmdline)
     }
     else if(strncmp(cmdline,"mkfile ",7)==0)
     {
-        fat16_create_file(NULL,cmdline+7);
+        vfs_mkfile(cmdline+7);
     }
     else if(strncmp(cmdline,"rdfile ",7)==0)
     {
-        fileinfo_t finfo;
-        if(fat16_open_file(&finfo,cmdline+7)==-1)
+        vfs_node_t node;
+        if(cmdline[7]!='/')
+        {
+            char *abspath=rel2abs(cmdline+7);
+            node=vfs_open(abspath);
+            kfree(abspath);
+        }
+        else
+        {
+            node=vfs_open(cmdline+7);
+        }
+        if(node==0)
         {
             if(task->langmode==0)
             {
@@ -434,40 +537,33 @@ void cmd_run(console_t *console,char *cmdline)
         }
         else
         {
-            int status;
-            char *buf = (char *) malloc(finfo.size + 5);
-            status = fat16_read_file(&finfo, buf);
-            console_putstr(console,buf);
-            console_putchar(console,'\n');
-            free(buf);
-        }
-    }
-    else if(strcmp(cmdline,"wrfile")==0)
-    {
-        fileinfo_t finfo;
-        if(fat16_open_file(&finfo,"114514.txt")==-1)
-        {
-            if(task->langmode==0)
+            if(node->type==file_dir)
             {
-                console_putstr(console,"No such file.\n");
+                if(task->langmode==0)
+                {
+                    console_putstr(console,"This is a directory.\n");
+                }
+                else if(task->langmode==1 || task->langmode==2)
+                {
+                    console_putstr(console,"这是一个目录.\n");
+                } 
             }
-            else if(task->langmode==1 || task->langmode==2)
+            else
             {
-                console_putstr(console,"没有这样的文件.\n");
-            } 
-        }
-        else
-        {
-            int status;
-            char *buf = (char *) malloc(512);
-            strcpy(buf,"1145141919810");
-            status = fat16_write_file(&finfo, buf, strlen(buf));
-            free(buf);
+                int status;
+                char *buf = (char *) kmalloc(node->size + 5);
+                vfs_read(node,buf,0,node->size);
+                console_putstr(console,buf);
+                console_putchar(console,'\n');
+                kfree(buf);
+            }
         }
     }
     else if(strncmp(cmdline,"del ",4)==0)
     {
-        if(fat16_delete_file(cmdline+4)!=0)
+        vfs_node_t node;
+        node=vfs_open(cmdline+4);
+        if(node==0)
         {
             if(task->langmode==0)
             {
@@ -477,6 +573,10 @@ void cmd_run(console_t *console,char *cmdline)
             {
                 console_putstr(console,"没有这样的文件或删除时出错.\n");
             } 
+        }
+        else
+        {
+            vfs_free(node);
         }
     }
     else if(strncmp(cmdline,"langmode ",9)==0)
@@ -493,8 +593,10 @@ void cmd_run(console_t *console,char *cmdline)
     }
     else 
     {
-        int exist;
-        int ret = try_to_run_external(cmdline, &exist,cmdline, task_now()->window);
+        char main[60];
+        int exist=0;
+        get_execuable_file(cmdline,main);
+        int ret = try_to_run_external(main, &exist,cmdline, task_now()->window);
         if (!exist) {
             if(task->langmode==0)
             {
@@ -505,8 +607,6 @@ void cmd_run(console_t *console,char *cmdline)
                 console_putstr(console,"此命令无效.\n");
             }
             cmd_autofill(console,cmdline);
-        } else if (ret) {
-            //printf("shell: app `%s` exited abnormally, retval: %d (0x%x).\n", argv[0], ret, ret);
         }
     }
 }
@@ -535,45 +635,63 @@ void cmd_count(console_t *console)
     }
 }
 
-void cmd_dir(console_t *console)
+void cmd_ls(console_t *console)
 {
-    int entries,i,total=0,total_kb=0;;
-    fileinfo_t *root_dir = read_dir_entries(&entries);
+    file_ls(console,task_now()->work_dir);
+}
+
+void cmd_mkdir(console_t *console,char *dirname)
+{
     task_t *task=task_now();
-    if(task->langmode==0)
+    char *dirname_back=strdup(dirname);
+    if(file_mkdir(dirname_back)==-1)
     {
-        console_putstr(console,"Files on disk:\n");
-    }
-    else if(task->langmode==1 || task->langmode==2)
-    {
-        console_putstr(console,"磁盘上的文件:\n");
-    }
-    char s[50],s2[10];
-    for (i = 0; i < entries; i++)
-    {
-        if(root_dir[i].name[0]!=0xe5)
+        if(task->langmode==1 || task->langmode==2)
         {
-            strncpy(s2,root_dir[i].name,8);
-            sprintf(s,"%s.%s\t%dKB\t",s2,root_dir[i].ext,root_dir[i].size/1024);
-            console_putstr(console,s);
-            
-            console_putchar(console,'\n');
-            total++;
-            total_kb+=root_dir[i].size/1024;
+            console_putstr(console,"目录创建错误.\n");
+        }
+        else
+        {
+            console_putstr(console,"Directory create error.\n");
         }
     }
-    if(task->langmode==0)
-    {
-        sprintf(s,"\n\t%d file(s) total\n\t%d KB total\n",total,total_kb);
-    }
-    else if(task->langmode==1 || task->langmode==2)
-    {
-        sprintf(s,"\n\t一共有%d个文件\n\t总共%dKB\n",total,total_kb);
-    }
-    console_putstr(console,s);
-    free(root_dir);
-    console_putchar(console,'\n');
+    kfree(dirname_back);
 }
+
+void cmd_cd(console_t *console,char *dirname)
+{
+    task_t *task=task_now();
+    // if(dirname[0]!='/')
+    // {
+    //     strcpy(dirname,rel2abs(dirname));
+    // }
+    int status=file_cd(dirname);
+    char s[200];
+    if(status==-1)
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            console_putstr(console,"找不到目录.\n");
+        }
+        else
+        {
+            console_putstr(console,"No such directory.\n");
+        }
+    }
+    else if(status==-2)
+    {
+        if(task->langmode==1 || task->langmode==2)
+        {
+            sprintf(s,"%s不是目录.\n",dirname);
+        }
+        else
+        {
+            sprintf(s,"\"%s\" is not a directory.\n",dirname);
+        }
+        console_putstr(console,s);
+    }
+}
+
 
 void cmd_langmode(console_t *console,int lmode)
 {
@@ -622,10 +740,11 @@ void cmd_langmode(console_t *console,int lmode)
 
 void cmd_print(console_t *console,char *filename)
 {
-    fileinfo_t finfo;
+    vfs_node_t file;
     task_t *task=task_now();
     char s[40];
-    if(fat16_open_file(&finfo,filename)!=0)
+    file=vfs_open(filename);
+    if(file==0)
     {
         if(task->langmode==1 || task->langmode==2)
         {
@@ -637,7 +756,7 @@ void cmd_print(console_t *console,char *filename)
         }
         return;
     }
-    char *buf=(char *)malloc(sizeof(char)*(finfo.size+5));
+    char *buf=(char *)kmalloc(sizeof(char)*(file->size+5));
 
     if(task->langmode==1 || task->langmode==2)
     {
@@ -648,7 +767,7 @@ void cmd_print(console_t *console,char *filename)
         console_putstr(console,"Please place paper on the printer and press Enter...");
     }
     console_input(console,10);
-    fat16_read_file(&finfo,buf);
+    vfs_read(file,buf,0,file->size);
 
     if(task->langmode==1 || task->langmode==2)
     {
@@ -688,7 +807,7 @@ void cmd_print(console_t *console,char *filename)
         info_message("Printing completed.","Print");
     }
     close_window(window);
-    free(buf);
+    kfree(buf);
 
 }
 
@@ -727,8 +846,8 @@ void cmd_bootinfo(console_t *console)
 
 static char* get_ftype(char *ext1,int langmode)
 {
-    char *type=(char *)malloc(sizeof(char)*50);
-    char *ext=(char *)malloc(sizeof(char)*4);
+    char *type=(char *)kmalloc(sizeof(char)*50);
+    char *ext=(char *)kmalloc(sizeof(char)*4);
     strncpy(ext,ext1,3);
     if(strcmp(ext,"BIN")==0)
     {
@@ -807,15 +926,15 @@ static char* get_ftype(char *ext1,int langmode)
             strcpy(type,"Unknown");
         }
     }
-    free(ext);
+    kfree(ext);
     return type;
 }
 
-static int isexecutable(fileinfo_t *finfo,char *result)
+static int isexecutable(vfs_node_t file,char *result)
 {
-    char *buf=(char *)malloc(sizeof(char)*(finfo->size+5));
+    char *buf=(char *)kmalloc(file->size);
     task_t *task=task_now();
-    fat16_read_file(finfo,buf);
+    vfs_read(file,buf,0,file->size);
     if(elf32Validate((Elf32_Ehdr *)buf))
     {
         if(result!=NULL)
@@ -829,10 +948,10 @@ static int isexecutable(fileinfo_t *finfo,char *result)
                 strcpy(result,"Executable File (ELF Format)");
             }
         }
-        free(buf);
+        kfree(buf);
         return 1;
     }
-    else if(finfo->size>=36 && strncmp(buf + 4, "WPRG", 4) == 0 && buf[0] == 0x00)
+    else if(file->size>=36 && strncmp(buf + 4, "WPRG", 4) == 0 && buf[0] == 0x00)
     {
         if(result!=NULL)
         {
@@ -845,7 +964,7 @@ static int isexecutable(fileinfo_t *finfo,char *result)
                 strcpy(result,"Executable File (Neumann Old Format)");
             }
         }
-        free(buf);
+        kfree(buf);
         return 2;    
     }
     else
@@ -862,16 +981,17 @@ static int isexecutable(fileinfo_t *finfo,char *result)
                 strcpy(result,"Unexecutable File");
             }
         }
-        free(buf);
+        kfree(buf);
         return 0;
     }
 }
 
 void cmd_finfo(console_t *console,char *filename)
 {
-    fileinfo_t finfo;
+    vfs_node_t file;
     task_t *task=task_now();
-    if(fat16_open_file(&finfo,filename)!=0)
+    file=vfs_open(filename);
+    if(file==0)
     {
         if(task->langmode==1 || task->langmode==2)
         {
@@ -886,32 +1006,38 @@ void cmd_finfo(console_t *console,char *filename)
     char s[100];
     if(task->langmode==1 || task->langmode==2)
     {
-        sprintf(s,"文件名:%s\n",finfo.name);
+        sprintf(s,"文件名:%s\n",file->name);
     }
     else
     {
-        sprintf(s,"File Name:%s\n",finfo.name);
+        sprintf(s,"File Name:%s\n",file->name);
     }
     console_putstr(console,s);
     if(task->langmode==1 || task->langmode==2)
     {
-        sprintf(s,"文件拓展名:%s\n",finfo.ext);
+        sprintf(s,"文件大小:%uKB\n",file->size/1024);
     }
     else
     {
-        sprintf(s,"File Extension:%s\n",finfo.ext);
+        sprintf(s,"File Size:%uKB\n",file->size/1024);
     }
     console_putstr(console,s);
-    if(task->langmode==1 || task->langmode==2)
+    char ext[200];
+    int flag=0;
+    int j=0;
+    for(int i=0;i<strlen(file->name);i++)
     {
-        sprintf(s,"文件大小:%uKB\n",finfo.size/1024);
+        if(file->name[i]=='.')
+        {
+            flag=1;
+        }
+        if(flag)
+        {
+            ext[j++]=file->name[i];
+        }
     }
-    else
-    {
-        sprintf(s,"File Size:%uKB\n",finfo.size/1024);
-    }
-    console_putstr(console,s);
-    char *type=get_ftype(finfo.ext,task->langmode);
+    ext[j]=0;
+    char *type=get_ftype(ext,task->langmode);
     if(task->langmode==1 || task->langmode==2)
     {
         sprintf(s,"文件类型:%s\n",type);
@@ -921,9 +1047,9 @@ void cmd_finfo(console_t *console,char *filename)
         sprintf(s,"File Type:%s\n",type);
     }
     console_putstr(console,s);
-    free(type);
-    char *result=(char *)malloc(sizeof(char)*50);
-    isexecutable(&finfo,result);
+    kfree(type);
+    char *result=(char *)kmalloc(sizeof(char)*50);
+    isexecutable(file,result);
     if(task->langmode==1 || task->langmode==2)
     {
         sprintf(s,"可执行:%s\n",result);
@@ -933,7 +1059,7 @@ void cmd_finfo(console_t *console,char *filename)
         sprintf(s,"Executable:%s\n",result);
     }
     console_putstr(console,s);
-    free(result);
+    kfree(result);
 }
 
 

@@ -93,7 +93,7 @@ extern void irq15();
 
 
 void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint16_t ar);
-static void idt_set_gate(uint8_t num, uint32_t offset, uint16_t sel, uint8_t flags);
+void idt_set_gate(uint8_t num, uint32_t offset, uint16_t sel, uint8_t flags);
 
 void init_gdtidt(void);
 #endif
