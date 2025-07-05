@@ -732,7 +732,7 @@ void ime_init()
     
     sheet_refresh(ime_sheet,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1);
     sheet_slide(ime_sheet,binfo->scrnx-ime_sheet->bxsize,binfo->scrny-ime_sheet->bysize-100);
-    sheet_updown(ime_sheet,2);
+    sheet_updown(ime_sheet,1);
     fifo_init(&key_fifo,128,key_buf);
 
     ime_task=create_kernel_task(ime_main);

@@ -54,7 +54,7 @@ typedef struct TASK {
 #define MAX_TASKS 1000
 #define TASK_GDT0 3
 
-#define STACK_SIZE 1024
+#define STACK_SIZE 2
  
 typedef struct TASKCTL {
     int running, now;

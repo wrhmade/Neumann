@@ -115,7 +115,7 @@ int read_ini(char *filename,char* section,char* key,char *value)
     char *buf;
     vfs_node_t node;
     node=vfs_open(filename);
-    if(node==-1)
+    if(node==0)
     {
         //value=NULL;
         return -1;

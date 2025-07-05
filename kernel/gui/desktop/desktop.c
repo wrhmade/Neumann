@@ -82,7 +82,6 @@ void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize)
 	}
 	int returnvalue=theme_set(value,buf);
 	
-	
 	read_ini("/config/neumann.ini","wallpaper","wallpaper",value);
 	if(strcmp(value,"true")==0)
 	{

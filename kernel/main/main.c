@@ -192,13 +192,11 @@ void print_pcinfo(console_t *console)
 
 sheet_t *sht_mouse;
 uint32_t *buf_mouse;
-
 void taskc_main(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	int mmx=-1,mmy=-1,mmx2=0,x,y;
 	int new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0,i;
-	
 	sheet_t *sht;
 	uint8_t mouse_data,keyboard_data;
 	for(;;)
@@ -524,8 +522,6 @@ void krnlc_main(void)
 		log("Mount:/dev/hdb => /");
 		vfs_mount("/dev/hdb", vfs_open("/"));
 	}
-	
-	
 
 	log("Loading Font...");
 	char *value=(char *)kmalloc(sizeof(char)*10);
