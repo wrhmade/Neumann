@@ -31,11 +31,12 @@ Copyright W24 Studio
 #include <vfile.h>
 #include <fullscreen.h>
 #include <timer.h>
+#include <power.h>
 void console_main();
 
 static char commands[60][15]={"mem","exit","cls","newconsole","count","bootinfo","messtest","print",
 			"ls","mkdir","dzero","msdemo","lspci","echo","mkfile","rdfile","del","langmode","finfo","pcinfo",
-            "themeset","cd","fullscreen"};
+            "themeset","cd","fullscreen","poweroff","reboot"};
 
 #define COMMAND_NOW 22 //命令数量
 
@@ -471,6 +472,14 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strcmp(cmdline,"msdemo")==0)
     {
         start_msdemo();
+    }
+    else if(strcmp(cmdline,"poweroff")==0)
+    {
+        poweroff();
+    }
+    else if(strcmp(cmdline,"reboot")==0)
+    {
+        reboot();
     }
     else if(strcmp(cmdline,"lspci")==0)
     {

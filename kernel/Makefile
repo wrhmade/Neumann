@@ -9,7 +9,7 @@ OBJS=asmhead/asmhead.obj main/main.obj asm/nasmfunc.obj gui/graphic/graphic.obj 
 	plug-in/ime.obj krnlcons/krnlcons.obj drivers/fpu/fpu.obj drivers/cpu/cpu.obj drivers/pci/pci.obj exec/exec.obj gui/theme/theme.obj \
 	lib/math/math.obj disk/disk.obj disk/vdisk.obj drivers/fdc/fdc.obj drivers/dma/dma.obj fs/vfs.obj fs/devfs.obj fs/vfile.obj lib/data_structures/slist-strptr.obj \
 	lib/data_structures/rbtree-strptr.obj fs/fat.obj fs/fatfs/ff.obj fs/fatfs/ffsystem.obj fs/fatfs/ffunicode.obj fs/fatfs/diskio.obj\
-	user/fullscreen/fullscreen.obj drivers/dbuffer/dbuffer.obj drivers/ide/ide.obj fs/iso9660.obj drivers/nullzero/nullzero.obj
+	user/fullscreen/fullscreen.obj drivers/dbuffer/dbuffer.obj drivers/ide/ide.obj fs/iso9660.obj drivers/nullzero/nullzero.obj drivers/acpi/acpi.obj power/power.obj
 	
 default:
 	$(MAKE) -C asmhead
@@ -34,6 +34,7 @@ default:
 	$(MAKE) -C krnlcons
 	$(MAKE) -C exec
 	$(MAKE) -C disk
+	$(MAKE) -C power
 	$(LD) -Ttext 0x100000 -o kernel.bin $(OBJS) -e krnl_entry 
 
 clean:
@@ -59,6 +60,7 @@ clean:
 	$(MAKE) -C krnlcons clean
 	$(MAKE) -C exec clean
 	$(MAKE) -C disk clean
+	$(MAKE) -C power clean
 	$(DEL) kernel.bin
 
 	

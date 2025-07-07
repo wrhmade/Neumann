@@ -45,6 +45,7 @@ Copyright W24 Studio
 #include <stdio.h>
 #include <exec.h>
 #include <nullzero.h>
+#include <acpi.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -436,6 +437,8 @@ void krnlc_main(void)
 	log("Initializing Double Buffer...");
 	init_dbuffer();
 	
+	log("Initializing ACPI...");
+	acpi_init();
 
 	log("Initializing Sheet...");
 	

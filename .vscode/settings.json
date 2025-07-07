@@ -72,6 +72,8 @@
         "type_traits": "c",
         "utility": "c",
         "typeinfo": "c",
-        "ide.h": "c"
+        "ide.h": "c",
+        "acpi.h": "c",
+        "power.h": "c"
     }
 }

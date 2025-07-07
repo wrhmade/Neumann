@@ -19,6 +19,7 @@ default:
 	$(MAKE) -C dbuffer
 	$(MAKE) -C ide
 	$(MAKE) -C nullzero
+	$(MAKE) -C acpi
 
 clean:
 	$(MAKE) -C io clean
@@ -38,3 +39,4 @@ clean:
 	$(MAKE) -C dbuffer clean
 	$(MAKE) -C ide clean
 	$(MAKE) -C nullzero clean
+	$(MAKE) -C acpi clean
