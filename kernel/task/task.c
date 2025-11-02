@@ -15,6 +15,9 @@ Copyright W24 Studio
 #include <macro.h>
 #include <binfo.h>
 #include <fifo.h>
+#include <console.h>
+#include <stdio.h>
+#include <syscall.h>
 
 extern void farjmp(int,int);
  
@@ -38,15 +41,14 @@ task_t *task_init()
 
     task = task_alloc();
     task->flags = 2;
+    name_task(task,"Main System Task");
     taskctl->running = 1;
     taskctl->now = 0;
     taskctl->tasks[0] = task;
     load_tr(task->sel); // 向CPU报告当前task->sel对应的任务为正在运行的任务
-
     idle=create_kernel_task(task_idle);
-
+    name_task(idle,"Idle Task");
     task_run(idle);
-
     return task;
 }
 
@@ -75,15 +77,15 @@ task_t *task_alloc()
             task->window=NULL;
             task->fifobuf=(uint32_t *)kmalloc(sizeof(uint32_t)*128);
             fifo_init(&task->fifo,128,task->fifobuf);
-            task->fd_table[0] = 0; // 标准输入，占位
-            task->fd_table[1] = 1; // 标准输出，占位
-            task->fd_table[2] = 2; // 标准错误，占位
-            for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
-                task->fd_table[i] = -1; // 其余文件均可用
-            }
-
             task->work_dir=kmalloc(260);
             strcpy(task->work_dir,"/");
+            task->fd_table[0]=0;
+            task->fd_table[1]=1;
+            task->fd_table[2]=2;
+            for(int i=3;i<MAX_FILE_OPEN_PER_TASK;i++)
+            {
+                task->fd_table[i]=-1;
+            }
 
             task->is_user = false;
             task->langmode=0;
@@ -164,8 +166,9 @@ int task_wait(int pid)
     while (task->my_retval.pid == -1); // 若没有返回值就一直等着
     task->flags = 0; // 释放为可用
     // 总算把你等死了，释放该任务所占资源
-    for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
-        if (task->fd_table[i] != -1) sys_close(task->fd_table[i]); // 关闭所有打开的文件
+    if(task->name)
+    {
+        kfree(task->name);
     }
     // 该任务kmalloc的所有东西都在数据段里，所以释放了数据段就相当于全释放了
     if (task->is_user) kfree((void *) task->ds_base); // 释放数据段
@@ -189,4 +192,36 @@ task_t *create_kernel_task(void *entry)
     new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
     new_task->tss.cs = 1 * 8;
     return new_task;
+}
+
+
+void name_task(task_t *task,const char *name)
+{
+    task->name=strdup(name);
+}
+
+void cmd_lsproc(console_t *console)
+{
+    task_t *task=task_now();
+    char s[300];
+    if(task->langmode==0)
+    {
+        console_putstr(console,"Process ID      Process Name\n");
+        console_putstr(console,"-------------------------------------------------------------------------------\n");
+        for(int i=0;i<taskctl->running;i++)
+        {
+            sprintf(s,"%03d\t\t\t\t%s\n",task_pid(taskctl->tasks[i]),taskctl->tasks[i]->name?taskctl->tasks[i]->name:"Unnamed");
+            console_putstr(console,s);
+        }
+    }
+    else if(task->langmode==1 || task->langmode==2)
+    {
+        console_putstr(console,"进程ID          进程名\n");
+        console_putstr(console,"-------------------------------------------------------------------------------\n");
+        for(int i=0;i<taskctl->running;i++)
+        {
+            sprintf(s,"%03d\t\t\t\t%s\n",task_pid(taskctl->tasks[i]),taskctl->tasks[i]->name?taskctl->tasks[i]->name:"未命名");
+            console_putstr(console,s);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312 -nostdinc -mno-mmx -mno-sse -mno-sse2
+GCC	=gcc -m32 -I. -O0 -fno-builtin -fno-stack-protector -Wall -finput-charset=UTF-8 -fexec-charset=GB2312 -nostdinc -mno-sse -mno-sse2
 GCC2 =gcc -m32 -O0
 AR	=ar
 LD	=ld -m $(LD_FORMAT)

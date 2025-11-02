@@ -13,26 +13,32 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <dbuffer.h>
 
-uint16_t LCD_AlphaBlend(uint32_t foreground_color,uint32_t background_color,uint8_t alpha)
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_malloc(x,u)  ((void)(u),kmalloc(x))
+#define STBTT_free(x,u)    ((void)(u),kfree(x))
+#include <stb_truetype.h>
+#include <vfs.h>
+
+#define ALPHABLEND_SUB(fc,bc,a) (fc*a+bc*(255-a)+128)>>8
+
+uint32_t alphablend(uint32_t fc,uint32_t bc,uint8_t a)
 {
-	uint16_t r=0,g=0,b=0;
-	if((foreground_color==0xffffff)&&(background_color==0)){	//默认的前景和背景色，不做alpha计算
-		r=alpha;
-		g=alpha;
-		b=alpha;
-	}
-	else{
-		uint8_t *fg = (uint8_t *)&foreground_color;
-		uint8_t *bg = (uint8_t *)&background_color;
-			
-		b = ((int)(*fg * alpha) + (int)*bg * (256 - alpha))>>8;
-		fg++;bg++;
-		g = ((int)(*fg * alpha) + (int)*bg * (256 - alpha))>>8;
-		fg++;bg++;
-		r = ((int)(*fg * alpha) + (int)*bg * (256 - alpha))>>8;
-	}
-	uint16_t temp= (((b >>3) & 0x1f)<<0)|(((g>>2) & 0x3f) << 5) |(((r >>3) & 0x1f) <<11);
-	return temp;
+	uint8_t fr,fg,fb;
+	uint8_t br,bg,bb;
+	uint8_t r,g,b;
+	fr=(fc>>16)&0xFF;
+	fg=(fc>>8)&0xFF;
+	fb=fc&0xFF;
+
+	br=(bc>>16)&0xFF;
+	bg=(bc>>8)&0xFF;
+	bb=bc&0xFF;
+
+	r=ALPHABLEND_SUB(fr,br,a);
+	g=ALPHABLEND_SUB(fg,bg,a);
+	b=ALPHABLEND_SUB(fb,bb,a);
+
+	return ARGB(255,r,g,b);
 }
 
 void boxfill(uint32_t *vram,uint16_t xsize,uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2,uint32_t c)
@@ -67,47 +73,48 @@ void putfont(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c,
 	return;
 }
 
-void putstr_ascii(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, unsigned char *s)
+void putstr_ascii(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, char *s)
 {
 	task_t *task=task_now();
     putstr_ascii_lmode(vram,xsize,x,y,c,s,task->langmode);
 }
 
-void putstr_ascii_lmode(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, unsigned char *s,int langmode)
+void putstr_ascii_lmode(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, char *s,int langmode)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     extern char asciifnt[4096];
+	unsigned char *p=(unsigned char *)s;
 	char *font;
     int i,k,t;
 	task_t *task=task_now();
-	if(langmode==0 || (langmode==1 && binfo->hzk16==NULL) || (langmode==2 && binfo->hzk16f==NULL))//英文模式或者中文模式但时没有中文字库时
+	if(langmode==0 || (langmode==1 && binfo->hzk16==NULL) || (langmode==2 && binfo->hzk16f==NULL))//英文模式或者中文模式但是没有中文字库时
 	{
-    	for(i=0;s[i]!=0;i++)
+    	for(i=0;p[i]!=0;i++)
     	{
-    	    putfont(vram,xsize,x,y,c,asciifnt+s[i]*16);
+    	    putfont(vram,xsize,x,y,c,asciifnt+p[i]*16);
     	    x+=8;
     	}
 	}
 	else if(langmode==1 && binfo->hzk16!=NULL)//简体中文模式且有中文字库时
 	{
-		for(i=0;s[i]!=0;i++)
+		for(i=0;p[i]!=0;i++)
     	{
 
     	    if(task->langbyte==0)
 			{
-				if(0xa1<=s[i] && s[i]<=0xfe)
+				if(0xa1<=p[i] && p[i]<=0xfe)
 				{
-					task->langbyte=s[i];
+					task->langbyte=p[i];
 				}
 				else
 				{
-					putfont(vram,xsize,x,y,c,asciifnt+s[i]*16);
+					putfont(vram,xsize,x,y,c,asciifnt+p[i]*16);
 				}
 			}
 			else
 			{
 				k=task->langbyte-0xa1;
-				t=s[i]-0xa1;
+				t=p[i]-0xa1;
 				task->langbyte=0;
 				font = binfo->hzk16 + (k * 94 + t) * 32;
 				putfont_gb2312(vram,xsize,x-8,y,c,font,font+16);
@@ -122,19 +129,19 @@ void putstr_ascii_lmode(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, 
 
     	    if(task->langbyte==0)
 			{
-				if(0xa1<=s[i] && s[i]<=0xfe)
+				if(0xa1<=p[i] && p[i]<=0xfe)
 				{
-					task->langbyte=s[i];
+					task->langbyte=p[i];
 				}
 				else
 				{
-					putfont(vram,xsize,x,y,c,asciifnt+s[i]*16);
+					putfont(vram,xsize,x,y,c,asciifnt+p[i]*16);
 				}
 			}
 			else
 			{
 				k=task->langbyte-0xa1;
-				t=s[i]-0xa1;
+				t=p[i]-0xa1;
 				task->langbyte=0;
 				font = binfo->hzk16f + (k * 94 + t) * 32;
 				putfont_gb2312(vram,xsize,x-8,y,c,font,font+16);
@@ -190,4 +197,131 @@ void putblock(uint32_t *vram, int vxsize, int pxsize,int pysize, int px0, int py
 		}
 	}
 	return;
+}
+
+void putfont_ttf(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t c,uint32_t bc,const unsigned char *ttf_buffer,int chr,uint32_t size)
+{
+    if(ttf_buffer == 0)
+    {
+        return;
+    }
+    
+    stbtt_fontinfo info;
+    if(stbtt_InitFont(&info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
+    {
+        int ascent, descent, lineGap;
+        stbtt_GetFontVMetrics(&info, &ascent, &descent, &lineGap);
+        float scale = stbtt_ScaleForPixelHeight(&info, size);
+        int width, height, xoff, yoff;
+        uint8_t *bitmap = stbtt_GetCodepointBitmap(&info, 0, scale, chr, &width, &height, &xoff, &yoff);
+        if(bitmap == 0)
+        {
+            return;
+        }
+        int char_height = (int)((ascent - descent) * scale);
+        int y_offset = y - char_height + (int)(ascent * scale);
+        for(int i = 0; i < height; i++)
+        {
+            for(int j = 0; j < width; j++)
+            {
+                int current_y = y_offset + yoff + i;
+                if(current_y >= 0 && current_y < xsize) {
+                    vram[current_y * xsize + (x + j)] = alphablend(c, bc, bitmap[i * width + j]);
+                }
+            }
+        }
+
+        stbtt_FreeBitmap(bitmap, NULL);
+    }
+}
+
+
+
+void putstr_ttf(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t c,uint32_t bc,const unsigned char *ttf_buffer,char *s,uint32_t size)
+{
+	int current_x=x;
+	int width,height;
+	stbtt_fontinfo info;
+	if(stbtt_InitFont(&info,ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0)))
+	{
+		for(int i=0;s[i]!=0;i++)
+		{
+			putfont_ttf(vram,xsize,current_x,y,c,bc,ttf_buffer,s[i],size);
+			if(s[i]==' ')
+			{
+        		int advance, left_side_bearing;
+        		stbtt_GetCodepointHMetrics(&info, ' ', &advance, &left_side_bearing);
+        		float scale = stbtt_ScaleForPixelHeight(&info, size);
+        		int space_width = (int)(advance * scale);
+				current_x+=space_width;
+			}
+			else
+			{
+				uint8_t *bitmap=stbtt_GetCodepointBitmap(&info,0,stbtt_ScaleForPixelHeight(&info,size),s[i],&width,&height,0,0);
+				stbtt_FreeBitmap(bitmap,NULL);
+				current_x+=width;
+			}
+		}
+	}
+}
+
+void putstr_ttf_file(uint32_t *vram,uint16_t xsize,uint16_t x,uint16_t y,uint32_t c,uint32_t bc,char *ttf_filename,char *s,uint32_t size,int instead)
+{
+	vfs_node_t node;
+	node=vfs_open(ttf_filename);
+	if(node==0)
+	{
+		if(instead)
+		{
+			putstr_ascii(vram,xsize,x,y-16,c,s);	
+		}
+		return;
+	}
+	else
+	{
+		char *buffer=kmalloc(node->size);
+		vfs_read(node,buffer,0,node->size);
+		putstr_ttf(vram,xsize,x,y,c,bc,(const unsigned char *)buffer,s,size);
+		kfree(buffer);
+	}
+}
+
+int hzk16_load(const char *filename)
+{
+	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+	vfs_node_t node=vfs_open(filename);
+
+	if(node==0)
+	{
+		return -1;
+	}
+
+	//为了保证安全，先分配再释放
+
+	char *old=binfo->hzk16;
+	binfo->hzk16=kmalloc(node->size+5);
+	vfs_read(node,binfo->hzk16,0,node->size);
+	kfree(old);
+
+	return 0;
+}
+
+int hzk16f_load(const char *filename)
+{
+	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+	vfs_node_t node=vfs_open(filename);
+
+	if(node==0)
+	{
+		return -1;
+	}
+
+	//为了保证安全，先分配再释放
+
+	char *old=binfo->hzk16f;
+	binfo->hzk16f=kmalloc(node->size+5);
+	vfs_read(node,binfo->hzk16f,0,node->size);
+	kfree(old);
+
+	return 0;
 }

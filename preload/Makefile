@@ -2,7 +2,7 @@ TOOLPATH=../../tools/
 include ../config.txt
 
 OBJS=base/asmhead.obj base/preload.obj base/nasmfunc.obj base/regctl.obj hd/hd.obj cmos/cmos.obj base/io.obj fs/fat16.obj mm/mm.obj mm/mmasm.obj lib/string/string.obj \
-	lib/sprintf/sprintf.obj graphic/graphic.obj font/font.obj
+	lib/sprintf/sprintf.obj graphic/graphic.obj font/font.obj base/krnlcons.obj
 
 default:
 	$(MAKE) -C base

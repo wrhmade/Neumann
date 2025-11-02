@@ -11,6 +11,7 @@ Copyright W24 Studio
 #include <mm.h>
 #include <console.h>
 #include <task.h>
+#include <stdio.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-conversion"
@@ -76,7 +77,7 @@ slist_sp_t slist_sp_prepend(slist_sp_t list, const char *key, void *val)
 void *slist_sp_get(slist_sp_t list, const char *key)
 {
 	for (slist_sp_t current = list; current; current = current->next) {
-		if (streq(current->key, key)) return current->val;
+		if (streq(current->key, (char *)key)) return current->val;
 	}
 	return 0;
 }
@@ -84,7 +85,7 @@ void *slist_sp_get(slist_sp_t list, const char *key)
 slist_sp_t slist_sp_get_node(slist_sp_t list, const char *key)
 {
 	for (slist_sp_t current = list; current; current = current->next) {
-		if (streq(current->key, key)) return current;
+		if (streq(current->key, (char *)key)) return current;
 	}
 	return 0;
 }
@@ -111,7 +112,7 @@ slist_sp_t slist_sp_search_node(slist_sp_t list, void *val)
 slist_sp_t slist_sp_delete(slist_sp_t list, const char *key)
 {
 	if (list == NULL) return 0;
-	if (streq(list->key, key)) {
+	if (streq(list->key, (char *)key)) {
 		slist_sp_t temp = list;
 		list            = list->next;
 		kfree(temp->key);
@@ -120,7 +121,7 @@ slist_sp_t slist_sp_delete(slist_sp_t list, const char *key)
 	}
 	slist_sp_t prev = list;
 	for (slist_sp_t current = list->next; current != 0; current = current->next) {
-		if (streq(current->key, key)) {
+		if (streq(current->key, (char *)key)) {
 			prev->next = current->next;
 			kfree(current->key);
 			kfree(current);
@@ -134,7 +135,7 @@ slist_sp_t slist_sp_delete(slist_sp_t list, const char *key)
 slist_sp_t slist_sp_delete_with(slist_sp_t list, const char *key, void (*free_value)(void *))
 {
 	if (list == 0) return 0;
-	if (streq(list->key, key)) {
+	if (streq(list->key, (char *)key)) {
 		slist_sp_t temp = list;
 		list            = list->next;
 		kfree(temp->key);
@@ -144,7 +145,7 @@ slist_sp_t slist_sp_delete_with(slist_sp_t list, const char *key, void (*free_va
 	}
 	slist_sp_t prev = list;
 	for (slist_sp_t current = list->next; current != 0; current = current->next) {
-		if (streq(current->key, key)) {
+		if (streq(current->key, (char *)key)) {
 			prev->next = current->next;
 			kfree(current->key);
 			free_value(current->val);

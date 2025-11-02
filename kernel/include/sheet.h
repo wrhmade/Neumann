@@ -21,6 +21,7 @@ typedef struct SHEET
     uint32_t *buf; // 图层上所描画内容的地址
     int bxsize, bysize; // 图层大小(bxsize*bysize)
     int vx0, vy0;       // 图层在画面上的位置坐标(vx0*vy0)
+    int have_color_inv;
     int color_inv;      // 色号
     int height;         // 表示该图层在第几层(图层层号)
     int flags;          // 存放图层的设定值

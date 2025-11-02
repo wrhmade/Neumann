@@ -8,9 +8,13 @@ Copyright W24 Studio
 #define COM_H
 #define SERIAL_PORT 0x3f8//COM串口地址
 int init_com(void);
-int serial_received(void);
-char read_serial(void);
-int is_transmit_empty(void);
+int serial_received(int index);
+char read_serial(int index);
+int is_transmit_empty(int index);
 void write_serial(char a);
+void write_serial_index(char a,int index);
 void serial_putstr(char *s);
+
+void select_serial(int n);
+void serial_putstr_index(char *s,int index);
 #endif

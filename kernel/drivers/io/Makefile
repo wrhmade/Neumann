@@ -2,7 +2,7 @@ TOOLPATH=../../../../tools/
 include ../../../config.txt
 
 default:
-	$(NASM) -f $(NASM_FORMAT) io.asm -o io.obj -I../../include -I../../../include
+	$(GCC) -I../../include -I../../../include -c io.c -o io.obj
 
 clean:
 	-$(DEL) io.obj

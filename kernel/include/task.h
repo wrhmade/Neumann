@@ -13,7 +13,8 @@ Copyright W24 Studio
 #include <vfs.h>
 #define MAX_FILE_OPEN_PER_TASK 32
 typedef struct WINDOW window_t;
- 
+typedef struct CONSOLE console_t;
+
 typedef enum task_flag_t
 {
     TASK_FPU_USED = 1,
@@ -39,7 +40,6 @@ typedef struct TASK {
     fifo_t fifo;
     uint32_t *fifobuf;
     exit_retval_t my_retval;
-    int fd_table[MAX_FILE_OPEN_PER_TASK];
     gdt_entry_t ldt[2];
     int langmode;//0为ASCII英文，1为GB2312简体中文，2为GB2312繁体中文
     unsigned char langbyte;
@@ -49,12 +49,14 @@ typedef struct TASK {
     bool is_user;
     void *brk_start, *brk_end; // here
     char *work_dir;
+    char *name;
+    int fd_table[MAX_FILE_OPEN_PER_TASK];
 } task_t;
  
-#define MAX_TASKS 1000
+#define MAX_TASKS 2000
 #define TASK_GDT0 3
 
-#define STACK_SIZE 2
+#define STACK_SIZE 64
  
 typedef struct TASKCTL {
     int running, now;
@@ -73,5 +75,6 @@ void task_exit(int value);
 int task_wait(int pid);
 void task_remove(task_t *task);
 task_t *create_kernel_task(void *entry);
-
+void name_task(task_t *task,const char *name);
+void cmd_lsproc(console_t *console);
 #endif

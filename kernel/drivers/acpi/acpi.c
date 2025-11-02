@@ -13,7 +13,9 @@ Copyright W24 Studio
 acpi_rsdp_t *rsdp;
 acpi_rsdt_t *rsdt;
 acpi_fadt_t *fadt;
-acpi_sdt_header *dsdt;
+acpi_sdt_header_t *dsdt;
+MADT *apic;
+Hpet *hpet;
 
 static int acpi_ok=0;
 
@@ -69,12 +71,14 @@ int find_rsdp()
     return -1;
 }
 
-acpi_sdt_header *acpi_find_table(char *magic,int len)
+acpi_sdt_header_t *acpi_find_table(char *magic,int len)
 {
     int entries=(rsdt->header.Length - sizeof(rsdt->header))/4;
+    char *entry_base = (char *)rsdt + sizeof(acpi_sdt_header_t);
+
     for (int i = 0; i < entries; i++)
     {
-        acpi_sdt_header *h = (acpi_sdt_header *)((uint32_t)rsdt->entry+i*4);
+        acpi_sdt_header_t *h = (acpi_sdt_header_t *)((uint32_t *)entry_base)[i];
         if (!memcmp(h->Signature,magic,len))
         {
             return h;
@@ -93,6 +97,18 @@ int find_dsdt()
 {
     dsdt=acpi_find_table(DSDT_MAGIC,4);
     return (dsdt==NULL)?-1:0;
+}
+
+int find_hpet()
+{
+    hpet=(Hpet *)acpi_find_table(HPET_MAGIC,4);
+    return (hpet==NULL)?-1:0;
+}
+
+int find_madt()
+{
+    apic=(MADT *)acpi_find_table(APIC_MAGIC,4);
+    return (apic==NULL)?-1:0;
 }
 
 void acpi_init()
@@ -119,19 +135,35 @@ void acpi_init()
     }
     sprintf(s,"INFO:FADT ADDR:0x%08p\n",fadt);
     krnlcons_putstr(s);
+    if(find_hpet()==-1)
+    {
+        krnlcons_putstr_color("Cannot find HPET.\n",0xFFFFFF,0x000000);
+        return;
+    }
+    sprintf(s,"INFO:HPET ADDR:0x%08p\n",hpet);
+    krnlcons_putstr(s);
+    hpet_init(hpet);
+    if(find_madt()==-1)
+    {
+        krnlcons_putstr_color("Cannot find MADT.\n",0xFFFFFF,0x000000);
+        return;
+    }
+    sprintf(s,"INFO:MADT ADDR:0x%08p\n",apic);
+    krnlcons_putstr(s);
+    apic_init(apic);
     if(!fadt_check())
     {
         krnlcons_putstr_color("FADT Error.\n",0xFFFFFF,0x000000);
         return;
     }
-    if(!(fadt->SMI_CommandPort==0 && fadt->AcpiDisable==0 && fadt->AcpiEnable==0 && io_in16(fadt->PM1aControlBlock)&1==0))
+    if(!(fadt->SMI_CommandPort==0 && fadt->AcpiDisable==0 && fadt->AcpiEnable==0 && (io_in16(fadt->PM1aControlBlock)&1)==0))
     {
         krnlcons_putstr("INFO:Setting up...\n");
         io_out8(fadt->SMI_CommandPort,fadt->AcpiEnable);
-        while(io_in16(fadt->PM1aControlBlock)&1==0);
+        while((io_in16(fadt->PM1aControlBlock)&1)==0);
         if(fadt->PM1bControlBlock)
         {
-            while(io_in16(fadt->PM1bControlBlock)&1==0);
+            while((io_in16(fadt->PM1bControlBlock)&1)==0);
         }
     }
     acpi_ok=1;
@@ -144,7 +176,7 @@ int acpi_poweroff()
     find_dsdt();
     int i;
     char *S5Addr = (char *)dsdt;
-	int dsdtLength = (dsdt->Length - sizeof(acpi_sdt_header))/4;
+	int dsdtLength = (dsdt->Length - sizeof(acpi_sdt_header_t))/4;
     unsigned short SLP_TYPa, SLP_TYPb;
     for(i=0;i<dsdtLength;i++)
     {
@@ -178,4 +210,5 @@ int acpi_poweroff()
 int acpi_reboot()
 {
     io_out8(0x64,0xfe);
+    return 1;
 }

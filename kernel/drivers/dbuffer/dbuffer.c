@@ -19,10 +19,6 @@ Copyright W24 Studio
 #define BINFO_DEF struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO
 static int dbuffer_inited=0;
 
-extern dbuffer_refresh_asm(int src,int dst,int count);
-
-
-
 //初始化双缓冲
 void init_dbuffer()
 {

@@ -738,6 +738,7 @@ MemCpy: ; ds:参数2 ==> es:参数1，大小：参数3
  
     ret
 
+
  InitKernel:
     xor esi, esi ; esi = 0;
     mov cx, word [BaseOfKernelFilePhyAddr + 2Ch] ; 这个内存地址存放的是ELF头中的e_phnum，即Program Header的个数

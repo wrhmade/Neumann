@@ -13,7 +13,6 @@ Copyright W24 Studio
  
 extern void gdt_flush(uint32_t);
 extern void idt_flush(uint32_t);
-extern void syscall_handler();
 extern void syscall_nhandler();
 
 gdt_entry_t gdt_entries[4096];
@@ -75,7 +74,7 @@ void idt_set_gate(uint8_t num, uint32_t offset, uint16_t sel, uint8_t flags)
 
 static void init_idt()
 {
-    init_pic();
+    // init_pic(); //使用APIC而不是PIC
 
     idt_ptr.limit = sizeof(idt_entry_t) * 256 - 1;
     idt_ptr.base = (uint32_t) &idt_entries;
@@ -138,7 +137,6 @@ static void init_idt()
 
     
     idt_set_gate(0x60, (uint32_t) syscall_nhandler, 0x08, 0x8E | 0x60);
-    idt_set_gate(0x80, (uint32_t) syscall_handler, 0x08, 0x8E | 0x60);
 
 }
 

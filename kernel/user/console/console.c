@@ -15,7 +15,6 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <macro.h>
 #include <stdint.h>
-#include <hd.h>
 #include <binfo.h>
 #include <macro.h>
 #include <ini.h>
@@ -26,21 +25,30 @@ Copyright W24 Studio
 #include <pci.h>
 #include <theme.h>
 #include <desktop.h>
-#include <disk.h>
 #include <vfs.h>
 #include <vfile.h>
 #include <fullscreen.h>
 #include <timer.h>
 #include <power.h>
+#include <audio.h>
+#include <wav.h>
+#include <sb16.h>
+#include <stdio.h>
+#include <msdemo.h>
+#include <exec.h>
+#include <screenshot.h>
+#include <keyboard.h>
+
 void console_main();
 
 static char commands[60][15]={"mem","exit","cls","newconsole","count","bootinfo","messtest","print",
 			"ls","mkdir","dzero","msdemo","lspci","echo","mkfile","rdfile","del","langmode","finfo","pcinfo",
-            "themeset","cd","fullscreen","poweroff","reboot"};
+            "themeset","cd","fullscreen","poweroff","reboot","sb16play","sb16playpcm","mathtest","ttftest","lsproc",
+            "reloadhzk16","reloadhzk16f","poweroffs","wintest","mount"};
 
-#define COMMAND_NOW 22 //命令数量
+#define COMMAND_NOW 35 //命令数量
 
-#define DEFAULT_COLOR 0xAAAAAA
+#define DEFAULT_COLOR 0xFFAAAAAA
 
 console_t *open_console(void)
 {
@@ -59,6 +67,7 @@ console_t *open_console(void)
     move_window(window,120,120);
     task_t *console_task=create_kernel_task(console_main);
     window_settask(window,console_task);
+    name_task(console_task,"Console");
     task_run(console_task);
     console->window=window;
     window->console=console;
@@ -73,7 +82,7 @@ console_t *open_console(void)
             console->consbuf[i][j]=0;
         }
     }
-    return window;
+    return console;
 }
 
 void close_console(console_t *console)
@@ -84,7 +93,6 @@ void close_console(console_t *console)
     }
     close_window(console->window);
     task_remove(console->window->task);
-    kfree(console->consbuf);
     kfree(console);
 }
 
@@ -92,12 +100,12 @@ void console_refresh(console_t *console)
 {
     char s[2];
     int i,j;
-    boxfill(console->window->sheet->buf,console->window->xsize,1,18,console->window->xsize-2,console->window->ysize-2,0x000000);
+    boxfill(console->window->sheet->buf,console->window->xsize,1,18,console->window->xsize-2,console->window->ysize-2,0xFF000000);
     for(i=0;i<25;i++)
     {
         for(j=0;j<80;j++)
         {
-            boxfill(console->window->sheet->buf,console->window->xsize,j*8+1,i*16+18,j*8+1+7,i*16+18+15,0x000000);
+            boxfill(console->window->sheet->buf,console->window->xsize,j*8+1,i*16+18,j*8+1+7,i*16+18+15,0xFF000000);
             if(console->consbuf[j][i]!='\0')
             {
                 s[0]=console->consbuf[j][i];
@@ -109,7 +117,7 @@ void console_refresh(console_t *console)
     {
         for(j=console->cury*16+18;j<=console->cury*16+33;j++)
         {
-            console->window->sheet->buf[j*642+i]=0xFFFFFF-console->window->sheet->buf[j*642+i];
+            console->window->sheet->buf[j*642+i]=0xFFFFFFFF-(console->window->sheet->buf[j*642+i]&0xFFFFFF);
         }
     }
     sheet_refresh(console->window->sheet,0,0,console->window->xsize-1,console->window->ysize-1);
@@ -150,10 +158,21 @@ void console_movcur(console_t *console,int x,int y)
     console_refresh(console);
 }
 
+void console_movcur_norefresh(console_t *console,int x,int y)
+{
+    console->curx=x;
+    console->cury=y;
+}
+
 void console_setchr(console_t *console,int x,int y,char c)
 {
     console->consbuf[x][y]=c;
     console_refresh(console);
+}
+
+void console_setchr_norefresh(console_t *console,int x,int y,char c)
+{
+    console->consbuf[x][y]=c;
 }
 
 void console_setcolor(console_t *console,int x,int y,uint32_t color)
@@ -182,8 +201,8 @@ static int console_putchar_sub(console_t *console,char c,int refresh,uint32_t co
     {
         if(console->curx>0)
         {
-            console_movcur(console,console->curx-1,console->cury);
-            console_setchr(console,console->curx,console->cury,0);
+            console_movcur_norefresh(console,console->curx-1,console->cury);
+            console_setchr_norefresh(console,console->curx,console->cury,0);
         }
     }
     else
@@ -258,8 +277,11 @@ char *console_input(console_t *console,int len)
 {
     task_t *task=console->window->task;
     char *str=(char *)kmalloc(sizeof(char)*(len+1));
+    memset(str,0,len+1);
     int i,index=0,line=0;
-
+    int history_index=-1;
+    int history_len=list_length(console->cmd_history);
+    list_t current=NULL;
     for(;;)
     {
         if(fifo_status(&task->fifo)>0)
@@ -288,6 +310,78 @@ char *console_input(console_t *console,int len)
                     index--;
                 }
             }
+            else if(i==KEY_UP)
+            {
+                if(history_len>0)
+                {
+                    if(history_index==-1)
+                    {
+                        current=console->cmd_history;
+                        history_index=0;
+                    }
+                    else
+                    {
+                        if(history_index<history_len-1)
+                        {
+                            history_index++;
+                            current=current->next;
+                        }
+                    }
+
+                    if(current!=NULL)
+                    {
+                        char current_text[CMDLINE_MAXLEN];
+                        strcpy(current_text,current->data);
+                        while(index)
+                        {
+                            console_putchar_norefresh(console,'\b');
+                            index--;
+                        }
+                        
+                        memset(str,0,len+1);
+                        strcpy(str,current_text);
+                        index=strlen(str);
+                        
+                        console_putstr(console,str);
+                    }
+                }
+            }
+            else if(i==KEY_DOWN)
+            {
+                if(history_len>0)
+                {
+                    if(history_index==-1)
+                    {
+                        current=console->cmd_history;
+                        history_index=0;
+                    }
+                    else
+                    {
+                        if(history_index>0)
+                        {
+                            history_index--;
+                            current=current->prev;
+                        }
+                    }
+
+                    if(current!=NULL)
+                    {
+                        char current_text[CMDLINE_MAXLEN];
+                        strcpy(current_text,current->data);
+                        while(index)
+                        {
+                            console_putchar_norefresh(console,'\b');
+                            index--;
+                        }
+                        
+                        memset(str,0,len+1);
+                        strcpy(str,current_text);
+                        index=strlen(str);
+                        
+                        console_putstr(console,str);
+                    }
+                }
+            }
             else if(i>=20 && i<=255)
             {
                 if(index<=len)
@@ -302,6 +396,7 @@ char *console_input(console_t *console,int len)
             }
         }
     }
+    list_prepend(console->cmd_history,strdup(str));
     return str;
 }
 
@@ -322,36 +417,6 @@ int console_getkey(console_t *console)
     }
 }
 
-static int cmd_parse(char *cmd_str, char **argv, char token)
-{
-    int arg_idx = 0;
-    while (arg_idx < MAX_ARG_NR) {
-        argv[arg_idx] = NULL;
-        arg_idx++;
-    } // 开局先把上一个argv抹掉
-    char *next = cmd_str; // 下一个字符
-    int argc = 0; // 这就是要返回的argc了
-    while (*next) { // 循环到结束为止
-        if (*next != '"') {
-            while (*next == token) *next++; // 多个token就只保留第一个，windows cmd就是这么处理的
-            if (*next == 0) break; // 如果跳过完token之后结束了，那就直接退出
-            argv[argc] = next; // 将首指针赋值过去，从这里开始就是当前参数
-            while (*next && *next != token) next++; // 跳到下一个token
-        } else {
-            next++; // 跳过引号
-            argv[argc] = next; // 这里开始就是当前参数
-            while (*next && *next != '"') next++; // 跳到引号
-        }
-        if (*next) { // 如果这里有token字符
-            *next++ = 0; // 将当前token字符设为0（结束符），next后移一个
-        }
-        if (argc > MAX_ARG_NR) return -1; // 参数太多，超过上限了
-        argc++; // argc增一，如果最后一个字符是空格时不提前退出，argc会错误地被多加1
-    }
-    return argc;
-}
-
-
 static void console_put_prompt()
 {
     char s[300];
@@ -366,21 +431,15 @@ void console_main()
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
     
     task->langmode=(binfo->hzk16==NULL)?((binfo->hzk16f==NULL)?0:2):1;
-    boxfill(task->window->sheet->buf,task->window->xsize,1,18,task->window->xsize-2,task->window->ysize-2,0x000000);
+    boxfill(task->window->sheet->buf,task->window->xsize,1,18,task->window->xsize-2,task->window->ysize-2,0xFF000000);
     sheet_refresh(task->window->sheet,0,0,task->window->xsize-1,task->window->ysize-1);
     console_refresh(task->window->console);
 
-    console_putstr_color(task->window->console,"Neumann Console\n\tCopyright(c) 2023-2025 W24 Studio & 71GN Deep Space\n\n",0xFFFFFF);
-        //console_putstr(task->window->console,"2");
-    char value[20];
-    int exist;
-    //cmd_run(task->window->console,"nsh.bin");
+    console_putstr_color(task->window->console,"Neumann Console\n\tCopyright(c) 2023-2025 W24 Studio & 71GN Deep Space\n\n",0xFFFFFFFF);
 
-    console_putstr_color(task->window->console,"Build-in shell\n",0x00FF00);
+    console_putstr_color(task->window->console,"Built-in shell\n",0xFF00FF00);
 
     char *sp;
-
-    //cmd_run(task->window->console,"myapp.bin");
 
     
 	for(;;)
@@ -416,18 +475,53 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_mem(console);
     }
-    else if(strcmp(cmdline,"fdtest")==0)
-    {
-        char buffer[512];
-        for(int i=0;i<512;i++)
-        {
-            buffer[i]='A';
-        }
-        my_disk_write_device(DEVICE_FD,0,1,buffer);
-    }
     else if(strcmp(cmdline,"fullscreen")==0)
     {
         fullscreen_show();
+        uint32_t *buffer=get_fullscreen_buffer();
+        for(;;)
+        {
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFF000000);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFFFF0000);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFFFFFF00);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFF0000FF);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFFFFFF00);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFF00FFFF);
+            fullscreen_refresh();
+            sleep(50);
+            boxfill(buffer,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFFFFFFFF);
+            fullscreen_refresh();
+            sleep(50);
+        }
+    }
+    else if(strcmp(cmdline,"test")==0)
+    {
+        // char test[]="测试";
+        // window_t *test_window=create_window("测试",50,50,-1,0);
+        // for(;;)
+        // {
+        //     boxfill(test_window->sheet->buf,test_window->xsize,1,17,test_window->xsize-2,test_window->ysize-2,0xFFFFFF);
+        //     putstr_ascii(test_window->sheet->buf,test_window->xsize,1,17,0x000000,test);
+        //     sheet_refresh(test_window->sheet,0,0,test_window->xsize-1,test_window->ysize-1);
+
+        // }
+        message_tip_show("测试","This is a test message.");
+    }
+    else if(strcmp(cmdline,"wintest")==0)
+    {
+        window_t *testw=create_window("Test",100,100,-1,1);
+        boxfill(testw->sheet->buf,testw->xsize,1,18,testw->xsize-2,testw->ysize-2,0x70FFFFFF);
+        sheet_refresh(testw->sheet,1,18,testw->xsize-2,testw->ysize-2);
     }
     else if(strcmp(cmdline,"exit")==0)
     {
@@ -440,6 +534,10 @@ void cmd_run(console_t *console,char *cmdline)
     else if(strcmp(cmdline,"newconsole")==0)
     {
         open_console();
+    }
+    else if(strcmp(cmdline,"count")==0)
+    {
+        cmd_count(console);
     }
     else if(strcmp(cmdline,"count")==0)
     {
@@ -461,13 +559,24 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_cd(console,cmdline+3);
     }
+    else if(strncmp(cmdline,"ttftest ",8)==0)
+    {
+        cmd_ttftest(console,cmdline+8);
+    }
     else if(strcmp(cmdline,"ls")==0)
     {
         cmd_ls(console);
     }
     else if(strcmp(cmdline,"dzero")==0)
     {
-        int a=114514/(1919810-1919810);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdiv-by-zero"
+    int a=114514/(1919810-1919810);
+    char s[2];
+    s[0]=a+'0';
+    s[1]=0;
+    console_putstr(console,s);
+#pragma GCC diagnostic pop
     }
     else if(strcmp(cmdline,"msdemo")==0)
     {
@@ -477,9 +586,26 @@ void cmd_run(console_t *console,char *cmdline)
     {
         poweroff();
     }
+    else if(strcmp(cmdline,"poweroffs")==0)
+    {
+        scheduled_poweroff(60);
+    }
+    else if(strcmp(cmdline,"mathtest")==0)
+    {
+        fpu_enable(task_now());
+        cos(30);
+    }
     else if(strcmp(cmdline,"reboot")==0)
     {
         reboot();
+    }
+    else if(strcmp(cmdline,"lsproc")==0)
+    {
+        cmd_lsproc(console);
+    }
+    else if(strcmp(cmdline,"screenshot")==0)
+    {
+        screenshot();
     }
     else if(strcmp(cmdline,"lspci")==0)
     {
@@ -559,7 +685,6 @@ void cmd_run(console_t *console,char *cmdline)
             }
             else
             {
-                int status;
                 char *buf = (char *) kmalloc(node->size + 5);
                 vfs_read(node,buf,0,node->size);
                 console_putstr(console,buf);
@@ -592,9 +717,37 @@ void cmd_run(console_t *console,char *cmdline)
     {
         cmd_langmode(console,cmdline[9]-'0');
     }
+    else if(strncmp(cmdline,"sb16play ",9)==0)
+    {
+        cmd_sb16play(console,cmdline+9);
+    }
+    else if(strncmp(cmdline,"sb16playpcm ",12)==0)
+    {
+        cmd_sb16playpcm(console,cmdline+12);
+    }
     else if(strncmp(cmdline,"finfo ",6)==0)
     {
         cmd_finfo(console,cmdline+6);
+    }
+    else if(strncmp(cmdline,"reloadhzk16 ",12)==0)
+    {
+        int ret=hzk16_load((const char *)(cmdline+12));
+        if(ret==-1)
+        {
+            console_putstr(console,"File not found.\n");
+        }
+    }
+    else if(strncmp(cmdline,"reloadhzk16f ",13)==0)
+    {
+        int ret=hzk16f_load((const char *)(cmdline+13));
+        if(ret==-1)
+        {
+            console_putstr(console,"File not found.\n");
+        }
+    }
+    else if(strncmp(cmdline,"mount ",6)==0)
+    {
+        console_mount(console,cmdline);
     }
     else if(strcmp(cmdline,"")==0)
     {
@@ -605,7 +758,7 @@ void cmd_run(console_t *console,char *cmdline)
         char main[60];
         int exist=0;
         get_execuable_file(cmdline,main);
-        int ret = try_to_run_external(main, &exist,cmdline, task_now()->window);
+        try_to_run_external(main, &exist,cmdline, task_now()->window);
         if (!exist) {
             if(task->langmode==0)
             {
@@ -629,6 +782,8 @@ void cmd_mem(console_t *console)
     sprintf(s,"Free:%uMB\n",free_space_total()/1024/1024);
     console_putstr(console,s);
     sprintf(s,"Used:%uMB\n",(binfo->memtotal-free_space_total())/1024/1024);
+    console_putstr(console,s);
+    sprintf(s,"Memory usage:%d%%\n",(binfo->memtotal-free_space_total())*100/binfo->memtotal);
     console_putstr(console,s);
 }
 
@@ -799,11 +954,11 @@ void cmd_print(console_t *console,char *filename)
     
     while(buf[i])
     {
-        lpt_put(buf[i]);
-        boxfill(window->sheet->buf,window->xsize,1,18,window->xsize-2,window->ysize-2,0xC6C6C6);
-        boxfill(window->sheet->buf,window->xsize,1,18,(int)((i+1)*100/strlen(buf))+1,window->ysize-2,0xFF0000);
+        lpt_put(buf[i],0);
+        boxfill(window->sheet->buf,window->xsize,1,18,window->xsize-2,window->ysize-2,0xFFC6C6C6);
+        boxfill(window->sheet->buf,window->xsize,1,18,(int)((i+1)*100/strlen(buf))+1,window->ysize-2,0xFFFF0000);
         sprintf(s,"%d%%",(int)((i+1)*100/strlen(buf)));
-        putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-strlen(s)*8/2,18,0x000000,s);
+        putstr_ascii(window->sheet->buf,window->xsize,window->xsize/2-strlen(s)*8/2,18,0xFF000000,s);
         sheet_refresh(window->sheet,0,0,window->xsize-1,window->ysize-1);
         i++;
     }
@@ -1086,14 +1241,14 @@ void cmd_autofill(console_t *console,char *cmdline)
                 first_print=1;
                 if(task->langmode==1 || task->langmode==2)
                 {
-                    console_putstr_color(console,"预测命令:",0xFFFFFF);
+                    console_putstr_color(console,"预测命令:",0xFFFFFFFF);
                 }
                 else
                 {
-                    console_putstr_color(console,"Prediction command:",0xFFFFFF);
+                    console_putstr_color(console,"Prediction command:",0xFFFFFFFF);
                 }
             }
-            console_putstr_color(console,commands[i],0x00FFFF);
+            console_putstr_color(console,commands[i],0xFF00FFFF);
             console_putchar(console,' ');
             printed=1;
         }
@@ -1102,4 +1257,144 @@ void cmd_autofill(console_t *console,char *cmdline)
     {
         console_putstr(console,"\n");
     }
+}
+
+void cmd_sb16play(console_t *console,char *filename)
+{
+    vfs_node_t node;
+    node=vfs_open(filename);
+    if(node==0)
+    {
+        console_putstr(console,"File not found.\n");
+        return;
+    }
+    unsigned char *buffer=kmalloc(node->size);
+    vfs_read(node,buffer,0,node->size);
+
+    unsigned char* pcmData = NULL;
+    uint32_t pcmSize = 0;
+    WAVHeader header;
+    WAVMetadata metadata;
+    initMetadata(&metadata);
+
+    if(extractPCMFromBufferEx(buffer, node->size, &pcmData, &pcmSize, &header, &metadata)!=0)
+    {
+        kfree(buffer);
+        console_putstr(console,"Format error.\n");
+        return;
+    }
+    char s[500];
+
+    sprintf(s,"Sample Rate:%d\nData Base:0x%08X\n",header.sampleRate,pcmData);
+    console_putstr(console,s);
+
+    sb16_play(pcmData,pcmSize,header.sampleRate,header.bitsPerSample==16?PCM_SIGNED_16BIT:PCM_UNSIGNED_8BIT,header.numChannels);
+    kfree(pcmData);
+    freeMetadata(&metadata);
+    kfree(buffer);
+}
+
+void cmd_sb16playpcm(console_t *console,char *filename)
+{
+    vfs_node_t node;
+    node=vfs_open(filename);
+    if(node==0)
+    {
+        console_putstr(console,"File not found.\n");
+        return;
+    }
+    char *buffer=kmalloc(node->size);
+    vfs_read(node,buffer,0,node->size);
+    console_putstr(console,"Sample Rate:44100\n");
+    sb16_play((uint8_t *)buffer,node->size,44100,PCM_SIGNED_16BIT,1);
+    kfree(buffer);
+}
+
+void cmd_ttftest(console_t *console,char *filename)
+{
+    console_putstr(console,"Enter text:");
+    char *text=console_input(console,500);
+    window_t *window=create_window("TrueType Font File Test",2+strlen(text)*32,60,-1,1);
+    putstr_ttf_file(window->sheet->buf,window->xsize,1,30+16,0xFF000000,0xFFFFFFFF,filename,text,32,0);
+    sheet_refresh(window->sheet,0,0,window->xsize-1,window->ysize-1);
+    kfree(text);
+}
+
+#define MAX_ARG_NR 30
+static int cmd_parse(char *cmd_str, char **argv, char token)
+{
+    int arg_idx = 0;
+    while (arg_idx < MAX_ARG_NR) {
+        argv[arg_idx] = NULL;
+        arg_idx++;
+    } // 开局先把上一个argv抹掉
+    char *next = cmd_str; // 下一个字符
+    int argc = 0; // 这就是要返回的argc了
+    while (*next) { // 循环到结束为止
+        if (*next != '"') {
+            while (*next == token) (*next)++; // 多个token就只保留第一个，windows cmd就是这么处理的
+            if (*next == 0) break; // 如果跳过完token之后结束了，那就直接退出
+            argv[argc] = next; // 将首指针赋值过去，从这里开始就是当前参数
+            while (*next && *next != token) next++; // 跳到下一个token
+        } else {
+            next++; // 跳过引号
+            argv[argc] = next; // 这里开始就是当前参数
+            while (*next && *next != '"') next++; // 跳到引号
+        }
+        if (*next) { // 如果这里有token字符
+            *next++ = 0; // 将当前token字符设为0（结束符），next后移一个
+        }
+        if (argc > MAX_ARG_NR) return -1; // 参数太多，超过上限了
+        argc++; // argc增一，如果最后一个字符是空格时不提前退出，argc会错误地被多加1
+    }
+    return argc;
+}
+
+void console_mount(console_t *console,char *cmdline)
+{
+    static char *argv[MAX_ARG_NR] = {NULL};
+    int argc=cmd_parse(cmdline,argv,' ');
+    if(argc<4)
+    {
+        console_putstr(console,"usage:mount [device] [mnt] [mode:auto|filesystem name]\n");
+        return;
+    }
+
+    if(vfs_open(argv[1])==0)
+    {
+        console_putstr(console,"Source not found.\n");
+        return;
+    }
+
+    vfs_node_t node=vfs_open(argv[2]);
+    if(node==0)
+    {
+        console_putstr(console,"Target not found.\n");
+        return;
+    }
+
+    int ret;
+
+    if(!strcmp(argv[3],"auto"))
+    {
+        ret=vfs_mount(argv[1],node);
+    }
+    else
+    {
+        int index=vfs_get_index_by_name(argv[3]);
+        if(index==-1)
+        {
+            console_putstr(console,"Unknown file system.\n");
+            return;
+        }
+        ret=vfs_mount_by_index(argv[1],node,index);
+    }    
+
+
+    if(ret==-1)
+    {
+        console_putstr(console,"Mount error.\n");
+        return;
+    }
+    return;
 }

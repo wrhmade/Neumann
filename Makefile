@@ -14,6 +14,7 @@ $(IMAGENAME):Makefile boot/boot.bin loader/loader.bin kernel/kernel.bin
 	$(FTCOPY) $(IMAGENAME) -srcpath res/neumann.ini -to -dstpath /config/neumann.ini
 	$(FTCOPY) $(IMAGENAME) -srcpath res/pymb.dat -to -dstpath /resource/ime/pymb.dat
 	$(FTCOPY) $(IMAGENAME) -srcpath res/console.ini -to -dstpath /config/console.ini
+	$(FTCOPY) $(IMAGENAME) -srcpath res/test.wav -to -dstpath /test.wav
 	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/default.tme -to -dstpath /resource/themes/default/default.tme
 	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/default.jpg -to -dstpath /resource/themes/default/default.jpg
 	# $(FTCOPY) $(IMAGENAME) -srcpath res/themes/summer.tme -to -dstpath /resource/themes/summer/summer.tme

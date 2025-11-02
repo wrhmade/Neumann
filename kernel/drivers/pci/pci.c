@@ -10,6 +10,9 @@ Copyright W24 Studio
 #include <list.h>
 #include <console.h>
 #include <task.h>
+#include <krnlcons.h>
+#include <io.h>
+#include <stdio.h>
 
 #define PCI_CONF_ADDR 0xCF8
 #define PCI_CONF_DATA 0xCFC
@@ -288,18 +291,9 @@ static void pci_check_device(u8 bus, u8 dev)
         device->vendorid = vendorid;
         device->deviceid = value >> 16;
 
-        value = pci_inl(bus, dev, func, PCI_CONF_COMMAND);
-        pci_command_t *cmd = (pci_command_t *)&value;
-        pci_status_t *status = (pci_status_t *)(&value + 2);
-
         value = pci_inl(bus, dev, func, PCI_CONF_REVISION);
         device->classcode = value >> 8;
         device->revision = value & 0xff;
-
-        //LOGK("PCI %02x:%02x.%x %4x:%4x %s\n",
-             device->bus, device->dev, device->func,
-             device->vendorid, device->deviceid,
-             pci_classname(device->classcode);
     }
 }
 
@@ -378,7 +372,6 @@ int count_pci_device()
 
 void cmd_lspci(console_t *console)
 {
-    unsigned int BUS, Equipment, F;
     task_t *task=task_now();
     char s[200];
     console_putstr(console,"+----------------------------------------------------------------------------\n");
@@ -410,4 +403,15 @@ void cmd_lspci(console_t *console)
 
     }
     console_putstr(console,"+----------------------------------------------------------------------------\n");
+}
+
+void klog_lspci()
+{
+    for (int i=0;i<list_length(pci_device_list);i++)
+    {
+        pci_device_t *device = list_nth(pci_device_list,i)->data;
+        if(device==NULL)continue;
+        klogf("PCI: %03d:%02d.%01d: [0x%04x:0x%04x] %s", device->bus, device->dev, device->func, device->vendorid,
+              device->deviceid, pci_classname(device->classcode));
+    }
 }

@@ -15,16 +15,17 @@ Copyright W24 Studio
 #include <buzzer.h>
 #include <com.h>
 #include <krnlcons.h>
+#include <ELF.h>
+
+sym_info_t get_symbol_info(void *kernel_file_address, Elf32_Addr symbol_address);
 
 void fault_process(registers_t regs)
-{
-    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    
+{ 
     krnlcons_display();
 
     krnlcons_change_backcolor(0x0000AA);
 	//不设置为黑屏
-	krnlcons_change_fortcolor(0xffffff);
+	krnlcons_change_forecolor(0xffffff);
     krnlcons_cleanscreen();
     krnlcons_putstr("Your system is currently experiencing some issues, which are preventing you from continuing to use it. If this is your first time encountering this issue, please force a restart. If you frequently encounter this issue, consider whether there is a problem with your computer or system.\n");
     krnlcons_putstr("Here are some technical information that can help you solve this error:\n");
@@ -157,16 +158,38 @@ void fault_process(registers_t regs)
     }
 }
 
-void print_stack_trace()
+void print_stack_trace(void)
 {
-	krnlcons_putstr("Callbacks:\n");
-    uint32_t *ebp, *eip;
-	char s[200];
-    asm volatile ("mov %%ebp, %0" : "=r" (ebp));
-    while (ebp) {
-        eip = ebp + 1;
-		sprintf(s,"   0x%08x\n", *eip);
-        krnlcons_putstr(s);
-        ebp = (uint32_t*)*ebp;
+    char s[50];
+    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    union RbpNode {
+            uintptr_t inner;
+            union RbpNode *next;
+    } *ebp;
+
+    uintptr_t eip;
+    __asm__ volatile("movl %%ebp, %0" : "=r"(ebp));
+    __asm__ volatile("call 1f\n1: popl %0" : "=r"(eip));
+
+	sprintf(s,"\nCall Trace:\n <TASK>\n");
+    krnlcons_putstr(s);
+    serial_putstr(s);
+
+    for (int i = 0; i < 16 && eip && (uintptr_t)ebp > 0x1000; ++i) {
+        sym_info_t sym_info = get_symbol_info(binfo->kernel_elf_base, eip);
+        if (!sym_info.name) {
+            sprintf(s,"  [<%p>] %s\n", eip, "unknown");
+			krnlcons_putstr(s);
+			serial_putstr(s);
+        } else {
+            sprintf(s,"  [<%p>] `%s`+%p\n", eip, sym_info.name, eip - sym_info.addr);
+			krnlcons_putstr(s);
+			serial_putstr(s);
+        }
+        eip = *(uintptr_t *)(ebp + 1);
+        ebp = ebp->next;
     }
+    sprintf(s," </TASK>\n");
+	krnlcons_putstr(s);
+	serial_putstr(s);
 }

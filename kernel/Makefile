@@ -4,12 +4,13 @@ include ../config.txt
 OBJS=asmhead/asmhead.obj main/main.obj asm/nasmfunc.obj gui/graphic/graphic.obj gui/desktop/desktop.obj font/font.obj gdtidt/gdtidt.obj gdtidt/gdtasm.obj \
 	int/int.obj int/intasm.obj lib/string/string.obj lib/sprintf/sprintf.obj drivers/io/io.obj drivers/mouse/mouse.obj drivers/keyboard/keyboard.obj fifo/fifo.obj \
 	drivers/keyboard/keymap.obj mm/mm.obj mm/mmasm.obj regctl/regctl.obj gui/sheet/sheet.obj gui/window/window.obj task/task.obj task/farjmp.obj drivers/timer/timer.obj \
-	drivers/buzzer/buzzer.obj user/console/console.obj fault/fault.obj drivers/hd/hd.obj drivers/cmos/cmos.obj syscall/syscall.obj syscall/syscasm.obj \
+	drivers/buzzer/buzzer.obj user/console/console.obj fault/fault.obj drivers/cmos/cmos.obj syscall/syscall.obj syscall/syscasm.obj \
 	plug-in/ini.obj drivers/com/com.obj drivers/lpt/lpt.obj ELF/elf.obj user/message/message.obj plug-in/msdemo.obj \
 	plug-in/ime.obj krnlcons/krnlcons.obj drivers/fpu/fpu.obj drivers/cpu/cpu.obj drivers/pci/pci.obj exec/exec.obj gui/theme/theme.obj \
-	lib/math/math.obj disk/disk.obj disk/vdisk.obj drivers/fdc/fdc.obj drivers/dma/dma.obj fs/vfs.obj fs/devfs.obj fs/vfile.obj lib/data_structures/slist-strptr.obj \
+	lib/math/math.obj disk/vdisk.obj drivers/fdc/fdc.obj drivers/dma/dma.obj fs/vfs.obj fs/devfs.obj fs/vfile.obj lib/data_structures/slist-strptr.obj \
 	lib/data_structures/rbtree-strptr.obj fs/fat.obj fs/fatfs/ff.obj fs/fatfs/ffsystem.obj fs/fatfs/ffunicode.obj fs/fatfs/diskio.obj\
-	user/fullscreen/fullscreen.obj drivers/dbuffer/dbuffer.obj drivers/ide/ide.obj fs/iso9660.obj drivers/nullzero/nullzero.obj drivers/acpi/acpi.obj power/power.obj
+	user/fullscreen/fullscreen.obj drivers/dbuffer/dbuffer.obj drivers/ide/ide.obj fs/iso9660.obj drivers/nullzero/nullzero.obj drivers/acpi/acpi.obj  \
+	drivers/acpi/hpet.obj drivers/interrupt/apic.obj power/power.obj drivers/audio/audio.obj drivers/audio/sb16/sb16.obj plug-in/wav.obj plug-in/screenshot.obj
 	
 default:
 	$(MAKE) -C asmhead

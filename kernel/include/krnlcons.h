@@ -16,5 +16,10 @@ void krnlcons_putchar_nomove(char c);
 void krnlcons_putstr(char *s);
 void krnlcons_putstr_color(char *s,int cc,int cb);
 void krnlcons_change_backcolor(int c);
-void krnlcons_change_fortcolor(int c);
+void krnlcons_change_forecolor(int c);
+
+
+void klog(char *s);
+int klogf(char *format,...);
+void krnlcons_changelangmode(int lmode);
 #endif

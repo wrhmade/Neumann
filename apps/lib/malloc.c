@@ -1,5 +1,9 @@
-#include <unistd.h>
+//会被stdlib.c包含
+#include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <napi/memory.h>
 
 typedef char ALIGN[16];
 
@@ -39,7 +43,7 @@ void *malloc(uint32_t size)
     }
     // 否则，申请内存
     total_size = sizeof(header_t) + size; // 需要一处放header的空间
-    block = sbrk(total_size); // sbrk，申请total_size大小内存
+    block = napi_heap_resize(total_size); // sbrk，申请total_size大小内存
     if (block == (void *) -1) return NULL; // 没有足够的内存，返回NULL
     // 申请成功！
     header = block; // 初始化header
@@ -58,7 +62,7 @@ void free(void *block)
     if (!block) return; // free(NULL)，有什么用捏
     header = (header_t *) block - 1; // 减去一个header_t的大小，刚好指向header_t
 
-    if ((char *) block + header->s.size == sbrk(0)) { // 正好在堆末尾
+    if ((char *) block + header->s.size == napi_heap_resize(0)) { // 正好在堆末尾
         if (head == tail) head = tail = NULL; // 只有一个内存块，全部清空
         else {
             // 遍历整个内存块链表，找到对应的内存块，并把它从链表中删除
@@ -73,9 +77,62 @@ void free(void *block)
             }
         }
         // 释放这一块内存
-        sbrk(0 - sizeof(header_t) - header->s.size);
+        napi_heap_resize(0 - sizeof(header_t) - header->s.size);
         return;
     }
     // 否则，设置为free
     header->s.is_free = 1;
+}
+
+void *calloc(size_t num, size_t size)
+{
+    if(num==0 || size==0)
+    {
+        return NULL;
+    }
+    uint32_t total_size=num*size;
+    if(size!=0&&num>SIZE_MAX/size)
+    {
+        return NULL;
+    }
+    void *p=malloc(total_size);
+    if(!p)
+    {
+        return NULL;
+    }
+    memset(p,0,total_size);
+    return p;
+}
+
+void *realloc(void *ptr, size_t new_size) {
+    if (!ptr) {
+        return malloc(new_size);
+    }
+    if (new_size == 0) {
+        free(ptr);
+        return NULL;
+    }
+    
+    header_t *header = (header_t *)ptr - 1;
+    uint32_t old_usable_size = header->s.size;
+    
+    // 如果新大小小于等于原可用大小，直接返回
+    if (new_size <= old_usable_size) {
+        return ptr;
+    }
+
+    
+    // 分配新内存
+    void *new_ptr = malloc(new_size);
+    if (!new_ptr) {
+        return NULL;
+    }
+    
+    // 复制数据
+    memcpy(new_ptr, ptr, old_usable_size);
+    
+    // 释放旧内存
+    free(ptr);
+    
+    return new_ptr;
 }

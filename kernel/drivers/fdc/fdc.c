@@ -11,6 +11,10 @@ Copyright W24 Studio
 #include <int.h>
 #include <dma.h>
 #include <vdisk.h>
+#include <io.h>
+#include <nasmfunc.h>
+#include <acpi.h>
+#include <stdio.h>
 
 #pragma GCC optimize("00") //硬件处理不开优化
 
@@ -247,9 +251,10 @@ int write_block(int block, byte *blockbuff, uint64_t nosectors)
 	return fdc_rw(block, blockbuff, 0, nosectors);
 }
 
-void fdc_int_handler()
+void fdc_int_handler(registers_t *regs)
 {
     floppy_int_count = 1;
+    send_eoi();
 }
 
 int fdc_reset()
@@ -295,8 +300,8 @@ int fdc_init()
     }
 
 
-    register_interrupt_handler(IRQ6,&fdc_int_handler);
-    irq_mask_clear(0x6);
+    register_interrupt_handler(IRQ6,fdc_int_handler);
+    // irq_mask_clear(0x6);
 
     if(fdc_reset())
     {

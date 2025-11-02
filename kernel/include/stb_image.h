@@ -371,6 +371,8 @@ RECENT REVISION HISTORY:
 #include <stdio.h>
 #endif // STBI_NO_STDIO
 
+#include <string.h>
+
 #define STBI_VERSION 1
 
 enum

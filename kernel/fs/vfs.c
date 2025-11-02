@@ -13,23 +13,10 @@ Copyright W24 Studio
 #include <list.h>
 #include <string.h>
 #include <mm.h>
+#include <stdio.h>
 
 #define finline static
 #define ALL_IMPLEMENTATION
-
-/* 判断是否是空白字符 */
-
-static int isspace(int c)
-{
-	return (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f');
-}
-
-/* 判断是否是数字 */
-static int isdigit(int c)
-{
-	return (c >= '0' && c <= '9');
-}
-
 
 vfs_node_t rootdir = 0;
 
@@ -39,6 +26,10 @@ struct vfs_callback vfs_empty_callback;
 static vfs_callback_t fs_callbacks[256] = {
 	[0] = &vfs_empty_callback,
 };
+static char *fs_names[256] = {
+	[0] = "emptyfs"
+};
+
 static int fs_nextid = 1;
 
 #define callbackof(node, _name_) (fs_callbacks[(node)->fsid]->_name_)
@@ -164,6 +155,7 @@ int vfs_regist(const char* name, vfs_callback_t callback)
 		if (((void **)callback)[i] == 0) return -1;
 	}
 	int id = fs_nextid++;
+	fs_names[id] = strdup(name);
 	fs_callbacks[id] = callback;
 	return id;
 }
@@ -252,16 +244,44 @@ void vfs_free_child(vfs_node_t vfs)
 	list_free_with(vfs->child, (void (*)(void *))vfs_free);
 }
 
+
+
+int vfs_mount_by_index(const char* src, vfs_node_t node, int index)
+{
+	if(index>=fs_nextid)
+	{
+		return -1;
+	}
+
+	int ret=fs_callbacks[index]->mount(src, node);
+	if(ret==0)
+	{
+		node->fsid = index;
+		node->root = node;
+	}
+	return ret;
+}
+
+int vfs_get_index_by_name(const char *name)
+{
+	for(int i=0;i<fs_nextid;i++)
+	{
+		if(!strcmp((const char *)fs_names[i],name))
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
 int vfs_mount(const char* src, vfs_node_t node)
 {
 	if (node == 0) return -1;
 	if (node->type != file_dir) return -1;
 	for (int i = 1; i < fs_nextid; i++) {
-		if (fs_callbacks[i]->mount(src, node) == 0) {
-			node->fsid = i;
-			node->root = node;
+		if (vfs_mount_by_index(src,node,i) == 0) {
 			return 0;
-		}
+		}	
 	}
 	return -1;
 }

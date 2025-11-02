@@ -12,8 +12,7 @@ Copyright W24 Studio
 #include <mm.h>
 #include <console.h>
 #include <list.h>
-
-cfile_t file_table[MAX_FILE_NUM];
+#include <stdio.h>
 
 /* 将vfs_node_t结构体路径转为字符串 */
 char *vfs_node_to_path(vfs_node_t node)
@@ -105,7 +104,6 @@ int file_ls(console_t *console,const char *path)
 int file_mkdir(const char *path)
 {
 	int is_relative=0;
-	task_t *task=task_now();
 	char *p=(char *)path;
 	if(path[0]!='/')
 	{
@@ -157,7 +155,7 @@ void path_parse(char *path, path_stack_t *path_stack)
     path_stack->path_stack_top = 0;
     path_stack->path_stack = (char **) kmalloc(strlen(path) * sizeof(char *)); // 初始化栈
     if (path[0] != '/') { // 第一个不是/，对后续处理会有影响
-        char *new_path = (char *) kmalloc(strlen(path) + 5); // 从今天起你就是新的path了
+        char *new_path = (char *)kmalloc(strlen(path) + 5); // 从今天起你就是新的path了
         strcpy(new_path, "/"); // 先复制一个/
         strcat(new_path, path); // 再把后续的路径拼接上
         path = new_path; // 夺舍
@@ -196,33 +194,4 @@ void path_stack_deinit(path_stack_t *path_stack)
 {
     for (int i = 0; i < path_stack->path_stack_top; i++) kfree(path_stack->path_stack[i]);
     kfree(path_stack->path_stack);
-}
-
-
-int install_to_global(vfs_node_t node)
-{
-    int i = MAX_FILE_NUM;
-    for (i = 0; i < MAX_FILE_NUM; i++) {
-        if (file_table[i].type == FT_USABLE) break; // 当前文件空闲，则占用
-    }
-    if (i == MAX_FILE_NUM) return -1; // 没有文件空闲，则退出
-    vfs_node_t safer_node = (vfs_node_t) kmalloc(sizeof(vfs_node_t)); // 分配一个finfo指针，准备挂到handle上
-    if (safer_node==0) return -1;
-    *safer_node = *node; // 装入
-    file_table[i].handle = safer_node; // 这就是其内部的handle
-    file_table[i].type = FT_REGULAR; // 类型为正常文件
-    file_table[i].pos = 0; // 由于刚刚注册，pos设为0
-    return i; // 返回其在文件表内的索引
-}
-
-int install_to_local(int global_fd)
-{
-    task_t *task = task_now(); // 获取当前任务
-    int i;
-    for (i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) { // fd 0 1 2分别代表标准输入 标准输出 标准错误，所以从3开始找起
-        if (task->fd_table[i] == -1) break; // 这里还空着，直接用
-    }
-    if (i == MAX_FILE_OPEN_PER_TASK) return -1; // 到达任务可打开的文件上限，返回-1
-    task->fd_table[i] = global_fd; // 将文件表索引安装到任务的文件描述符表
-    return i; // 返回索引，这就是对应的文件描述符了
 }

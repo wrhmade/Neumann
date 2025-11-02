@@ -6,6 +6,7 @@ Copyright W24 Studio
 
 #include <cpu.h>
 #include <stddef.h>
+#include <acpi.h>
 
 #pragma GCC optimize("00") //硬件处理不开优化
 
@@ -75,4 +76,15 @@ void cpu_get_model_name(char *model_name)
 	cpuid(0x80000003, &v[4], &v[5], &v[6], &v[7]);
 	cpuid(0x80000004, &v[8], &v[9], &v[10], &v[11]);
 	model_name[48] = 0;
+}
+
+int cpu_x2apic(void)
+{
+    #ifndef DISABLE_X2APIC
+    uint32_t eax, ebx, ecx, edx;
+    cpuid(0x00000001, &eax, &ebx, &ecx, &edx);
+    return (ecx & (1 << 21));
+    #else
+    return 0;
+    #endif
 }

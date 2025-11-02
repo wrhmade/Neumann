@@ -7,7 +7,6 @@ default:
 	$(MAKE) -C keyboard
 	$(MAKE) -C timer
 	$(MAKE) -C buzzer
-	$(MAKE) -C hd
 	$(MAKE) -C cmos
 	$(MAKE) -C com
 	$(MAKE) -C lpt
@@ -20,6 +19,8 @@ default:
 	$(MAKE) -C ide
 	$(MAKE) -C nullzero
 	$(MAKE) -C acpi
+	$(MAKE) -C interrupt
+	$(MAKE) -C audio
 
 clean:
 	$(MAKE) -C io clean
@@ -27,7 +28,6 @@ clean:
 	$(MAKE) -C keyboard clean
 	$(MAKE) -C timer clean
 	$(MAKE) -C buzzer clean
-	$(MAKE) -C hd clean
 	$(MAKE) -C cmos clean
 	$(MAKE) -C com clean
 	$(MAKE) -C lpt clean
@@ -40,3 +40,5 @@ clean:
 	$(MAKE) -C ide clean
 	$(MAKE) -C nullzero clean
 	$(MAKE) -C acpi clean
+	$(MAKE) -C interrupt clean
+	$(MAKE) -C audio clean

@@ -7,9 +7,11 @@ Copyright W24 Studio
 #ifndef LPT_H
 #define LPT_H
 
-#define LPT1_PORT_BASE 0x378    //LPT1接口基地址
-#define LPT1_PORT_DATA LPT1_PORT_BASE   //LPT1数据接口
-#define LPT1_PORT_STATUS LPT1_PORT_BASE+1   //LPT1状态接口
-#define LPT1_PORT_CONTROL LPT1_PORT_BASE+2  //LPT1控制接口
-void lpt_put(unsigned char c);
+#define LPT_DATA(n) lpt_base[n]
+#define LPT_STATUS(n) lpt_base[n]+1
+#define LPT_CONTROL(n) lpt_base[n]+2
+
+void lpt_put(unsigned char c,int i);
+int lpt_read(int i);
+void init_lpt();
 #endif

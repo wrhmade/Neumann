@@ -10,12 +10,17 @@ Copyright W24 Studio
 #include <macro.h>
 #include <string.h>
 #include <dbuffer.h>
+#include <acpi.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 static int krnlcons_cx,krnlcons_cy;
 struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
 
 int BACKCOLOR=0x000000;
-int FORTCOLOR=0xAAAAAA;
+int FORECOLOR=0xAAAAAA;
+
+int langmode=0;
 
 void krnlcons_display()
 {
@@ -25,14 +30,13 @@ void krnlcons_display()
 
 void krnlcons_showcur()
 {
-	int x,y;
 	for(int y=0;y<16;y++)
 	{
 		for(int x=0;x<8;x++)
 		{
 			if(binfo->vram[(krnlcons_cy+y)*binfo->scrnx+(krnlcons_cx+x)]==0x000000)
 			{
-				binfo->vram[(krnlcons_cy+y)*binfo->scrnx+(krnlcons_cx+x)]=FORTCOLOR-binfo->vram[(krnlcons_cy+y)*binfo->scrnx+(krnlcons_cx+x)];
+				binfo->vram[(krnlcons_cy+y)*binfo->scrnx+(krnlcons_cx+x)]=FORECOLOR-binfo->vram[(krnlcons_cy+y)*binfo->scrnx+(krnlcons_cx+x)];
 			}
 			else
 			{
@@ -41,7 +45,7 @@ void krnlcons_showcur()
 		}
 	}
 	dbuffer_refresh();
-	//boxfill(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,krnlcons_cx+7,krnlcons_cy+15,FORTCOLOR);
+	//boxfill(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,krnlcons_cx+7,krnlcons_cy+15,FORECOLOR);
 }
 
 void krnlcons_cleanscreen()
@@ -93,7 +97,7 @@ void krnlcons_putchar_color(char c,int cc,int bc)
 		boxfill(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,krnlcons_cx+7,krnlcons_cy+15,bc);
 		s[0]=c;
 		s[1]=0;
-		putstr_ascii_lmode(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,cc,s,0);
+		putstr_ascii_lmode(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,cc,s,langmode);
 		krnlcons_cx+=8;
 	}
 
@@ -123,7 +127,7 @@ void krnlcons_putchar_color_nomove(char c,int cc,int bc)
 		boxfill(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,krnlcons_cx+7,krnlcons_cy+15,bc);
 		s[0]=c;
 		s[1]=0;
-		putstr_ascii_lmode(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,cc,s,0);
+		putstr_ascii_lmode(binfo->vram,binfo->scrnx,krnlcons_cx,krnlcons_cy,cc,s,langmode);
 	}
 
 	if(krnlcons_cx>=binfo->scrnx-1)
@@ -136,12 +140,12 @@ void krnlcons_putchar_color_nomove(char c,int cc,int bc)
 
 void krnlcons_putchar(char c)
 {
-	krnlcons_putchar_color(c,FORTCOLOR,BACKCOLOR);
+	krnlcons_putchar_color(c,FORECOLOR,BACKCOLOR);
 }
 
 void krnlcons_putchar_nomove(char c)
 {
-	krnlcons_putchar_color_nomove(c,FORTCOLOR,BACKCOLOR);
+	krnlcons_putchar_color_nomove(c,FORECOLOR,BACKCOLOR);
 }
 
 void krnlcons_putstr(char *s)
@@ -168,8 +172,39 @@ void krnlcons_change_backcolor(int c)
 	dbuffer_refresh();
 }
 
-void krnlcons_change_fortcolor(int c)
+void krnlcons_change_forecolor(int c)
 {
-	FORTCOLOR=c;
+	FORECOLOR=c;
 	dbuffer_refresh();
+}
+
+void klog(char *s)
+{
+	char time_s[300];
+	sprintf(time_s,"[%5d.%06d]", nano_time() / 1000000000, (nano_time() / 1000) % 1000000);
+	krnlcons_putstr(time_s);
+	krnlcons_putstr(s);
+	krnlcons_putchar('\n');
+}
+
+int klogf(char *format,...)
+{
+	char time_s[300];
+	char s[1024];
+	va_list args;
+    int len;
+ 
+    va_start(args, format);
+    len = vsprintf(s,format,args);
+    va_end(args);
+	sprintf(time_s,"[%5d.%06d]", nano_time() / 1000000000, (nano_time() / 1000) % 1000000);
+	krnlcons_putstr(time_s);
+	krnlcons_putstr(s);
+	krnlcons_putchar('\n');
+    return len;
+}
+
+void krnlcons_changelangmode(int lmode)
+{
+	langmode=lmode;
 }

@@ -13,8 +13,8 @@ Copyright W24 Studio
 #include <console.h>
 #include <sheet.h>
 #include <gdtidt.h>
-#include <fcntl.h>
 #include <syscall.h>
+#include <vfile.h>
 
 extern shtctl_t *global_shtctl;
 
@@ -42,7 +42,7 @@ static void expand_user_segment(int increment)
     if (increment > 0) return; // expand是扩容你缩水是几个意思
     memcpy(new_base, (void *) base, size); // 原来的内容全复制进去
     // 用户进程的base必然由malloc分配，故用free释放之
-    free((void *) base);
+    kfree((void *) base);
     // 那么接下来就是把new_base设置成新的段了
     exec_ldt_set_gate(1, (int) new_base, size + increment - 1, 0x4092 | 0x60); // 反正只有数据段允许扩容我也就设置成数据段算了
     task->ds_base = (int) new_base; // 既然ds_base变了task里的应该同步更新
@@ -78,6 +78,7 @@ int sys_create_process(const char *app_name, const char *cmdline, const char *wo
     {
         task_now()->window->console->running_app=new_task;
     }
+    name_task(new_task,app_name);
     *((int *) (new_task->tss.esp + 4)) = (int) app_name;
     *((int *) (new_task->tss.esp + 8)) = (int) cmdline;
     *((int *) (new_task->tss.esp + 12)) = (int) work_dir;
@@ -128,8 +129,7 @@ void *sys_sbrk(int incr)
 
 void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
 {
-    char s[50] = {0};
-    char *p=app_name;
+    char *p=(char *)app_name;
     int isrel=0;
     if(p[0]!='/')
     {
@@ -151,12 +151,12 @@ void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
     {
         kfree(p);
     }
-    int first,last;
+    uint32_t first,last;
     char *code;
     int entry = load_elf((Elf32_Ehdr *) buf, &code, &first, &last); // buf是文件读进来的那个缓冲区，code是存实际代码的
     if (entry == -1) // 解析失败，直接exit(-1)
     {
-        sys_write(1,"App Format Error.\n",0);
+        console_putstr(task_now()->window->console,"App Format Error.\n");
         kfree(buf);
         task_exit(-1);
     }
@@ -166,14 +166,14 @@ void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
     task_now()->brk_start = (void *) last - first + 4 * 1024 * 1024;
     task_now()->brk_end = (void *) last - first + 5 * 1024 * 1024 - 1;
     int new_esp = last - first + 4 * 1024 * 1024 - 4;
-    int prev_brk = sys_sbrk(strlen(cmdline) + 5); // 分配cmdline这么长的内存，反正也输入不了1MB长的命令
+    int prev_brk = (int)sys_sbrk(strlen(cmdline) + 5); // 分配cmdline这么长的内存，反正也输入不了1MB长的命令
     strcpy((char *) (ds + prev_brk), cmdline); // sys_sbrk使用相对地址，要转换成以ds为基址的绝对地址需要加上ds
     *((int *) (ds + new_esp)) = (int) prev_brk; // 把prev_brk的地址写进栈里，这个位置可以被_start访问
     new_esp -= 4; // esp后移一个dword
     task_now()->ds_base = (int) ds; // 设置ds基址
     exec_ldt_set_gate(0, (int) code, last - first - 1, 0x409a | 0x60);
     exec_ldt_set_gate(1, (int) ds, last - first + 4 * 1024 * 1024 + 1 * 1024 * 1024 - 1, 0x4092 | 0x60);
-    start_app(entry, 0 * 8 + 4, new_esp, 1 * 8 + 4, &(task_now()->tss.esp0));
+    start_app(entry, 0 * 8 + 4, new_esp, 1 * 8 + 4, (int *)(&(task_now()->tss.esp0)));
     while (1);
 }
 

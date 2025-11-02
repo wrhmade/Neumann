@@ -7,20 +7,6 @@ Copyright W24 Studio
 #ifndef VFILE_H
 #define VFILE_H
 #include <console.h>
-#include <fcntl.h>
-
-#define MAX_FILE_NUM 512
-
-typedef struct FILE_STRUCT {
-    void *handle;
-    void *buffer;
-    int pos;
-    int size;
-    int open_cnt;
-    file_type_t type;
-    oflags_t flags;
-} cfile_t;
-
 
 typedef struct {
     int path_stack_top;
@@ -39,6 +25,4 @@ int file_mkdir(const char *path);
 char *rel2abs(const char *path);
 void path_parse(char *path, path_stack_t *path_stack);
 void path_stack_deinit(path_stack_t *path_stack);
-int install_to_global(vfs_node_t node);
-int install_to_local(int global_fd);
 #endif

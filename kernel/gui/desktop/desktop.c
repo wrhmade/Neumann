@@ -10,8 +10,6 @@ Copyright W24 Studio
 #include <macro.h>
 #include <binfo.h>
 #include <stdint.h>
-#include <jpeg.h>
-#include <bmp.h>
 #include <mm.h>
 #include <ini.h>
 #include <string.h>
@@ -22,6 +20,8 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
+#include <image.h>
 
 #define STBI_MALLOC(sz) kmalloc(sz)
 #define STBI_REALLOC(p,newsz) krealloc(p,newsz)
@@ -35,11 +35,6 @@ Copyright W24 Studio
 
 extern sheet_t *global_sht_back;
 extern uint32_t *global_buf_back;
-
-struct RGBA
-{
-	uint8_t r,g,b,a;
-};
 
 void desktop_reload(char *themename)
 {
@@ -73,7 +68,7 @@ void desktop_reload(char *themename)
 void init_desktop(uint32_t *buf,uint32_t xsize,uint32_t ysize)
 {
 	struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-	char *value=(char *)kmalloc(sizeof(char)*50);
+	char *value=(char *)kmalloc(sizeof(char)*100);
     boxfill(buf,xsize,0,0,xsize-1,ysize-1,DESKTOP_BACKCOLOR);
 	//char wallpaper[30];
 	if(read_ini("/config/neumann.ini","theme","default",value)!=0)
@@ -134,10 +129,10 @@ void draw_mouse(uint32_t *buf_mouse)
 	for (y = 0; y < 24; y++) {
 		for (x = 0; x < 24; x++) {
 			if (cursor[y][x] == '*') {
-				buf_mouse[y * 24 + x] = 0x000000;
+				buf_mouse[y * 24 + x] = 0xFF000000;
 			}
 			if (cursor[y][x] == 'O') {
-				buf_mouse[y * 24 + x] = 0xFFFFFF;
+				buf_mouse[y * 24 + x] = 0xFFFFFFFF;
 			}
 			if (cursor[y][x] == '.') {
 				buf_mouse[y * 24 + x] = DESKTOP_BACKCOLOR;
@@ -146,24 +141,16 @@ void draw_mouse(uint32_t *buf_mouse)
 	}
 }
 
-void convert_ABGR_to_ARGB(uint32_t* bitmap, size_t num_pixels) {
-  for (size_t i = 0; i < num_pixels; ++i) {
-    uint32_t pixel = bitmap[i];
-    uint8_t alpha = (pixel >> 24) & 0xFF;
-    uint8_t red = (pixel >> 16) & 0xFF;
-    uint8_t green = (pixel >> 8) & 0xFF;
-    uint8_t blue = pixel & 0xFF;
-    bitmap[i] = (alpha << 24) | (blue << 16) | (green << 8) | red;
-  }
-}
 
 int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name)
 {
 	vfs_node_t node;
 	char *buf;
-	int info[4],i,j,x0,y0,x1,y1;
-	uint8_t r,g,b,a;
+	int i,j,x0,y0;
+	uint8_t a,r,g,b;
 	struct RGBA *img;
+	char s[200];
+
 	node=vfs_open(wallpaper_name);
 	if(!node)
 	{
@@ -173,8 +160,8 @@ int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name)
 	vfs_read(node,buf,0,node->size);
 	
 	int width,height,bpp;
-	char s[200];
-	unsigned char *idata=stbi_load_from_memory(buf,node->size,&width,&height,&bpp,4);
+
+	unsigned char *idata=stbi_load_from_memory((stbi_uc const *)buf,node->size,&width,&height,&bpp,4);
 
 	
 
@@ -223,10 +210,11 @@ int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name)
 		{
 			if(x0+j>=0 && x0+j<x && y0+i>=0 && y0+i<y)
 			{
+				a=img[i*width+j].a;
 				r=img[i*width+j].r;
 				g=img[i*width+j].g;
 				b=img[i*width+j].b;
-				vram[(y0 + i) * x + (x0 + j)]=ARGB(255,r,g,b);
+				vram[(y0 + i) * x + (x0 + j)]=ARGB(a,r,g,b);
 			}
 		}
 	}
@@ -236,4 +224,5 @@ int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name)
 	kfree(buf);
 	stbi_image_free(idata);
 	//kfree(filename);
+    return 0;
 }

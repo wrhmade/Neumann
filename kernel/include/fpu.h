@@ -43,6 +43,7 @@ typedef struct fpu_t
 
 bool fpu_check();
 void fpu_disable(task_t *task);
+void fpu_handler(int vector);
 void fpu_enable(task_t *task);
 bool init_fpu();
 #endif

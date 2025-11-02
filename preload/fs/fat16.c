@@ -10,8 +10,6 @@ Copyright W24 Studio
 #include <cmos.h>
 #include <string.h>
 
-static file_t file_table[MAX_FILE_NUM];
-
 // 格式化文件系统
 int fat16_format_hd()
 {
@@ -33,7 +31,7 @@ int fat16_format_hd()
     hdr.BS_jmpBoot[0] = 0xeb;
     hdr.BS_jmpBoot[1] = 0x3c; // jmp到default_boot_code
     hdr.BS_jmpBoot[2] = 0x90; // nop凑够3字节
-    strcpy(hdr.BS_OEMName, "NEUMANN "); // OEM为neumann
+    strcpy((char *)hdr.BS_OEMName, "NEUMANN "); // OEM为neumann
     hdr.BPB_BytsPerSec = 512;
     hdr.BPB_SecPerClust = 1;
     hdr.BPB_RsvdSecCnt = 1;
@@ -55,8 +53,8 @@ int fat16_format_hd()
     hdr.BS_Reserved1 = 0;
     hdr.BS_BootSig = 0x29;
     hdr.BS_VolID = 0;
-    strcpy(hdr.BS_VolLab, "NEUMANNBOOT"); // 可以随便改
-    strcpy(hdr.BS_FileSysType, "FAT16   "); // 尽量别改
+    strcpy((char *)hdr.BS_VolLab, "NEUMANNBOOT"); // 可以随便改
+    strcpy((char *)hdr.BS_FileSysType, "FAT16   "); // 尽量别改
     memset(hdr.BS_BootCode, 0, 448);
     memcpy(hdr.BS_BootCode, default_boot_code, sizeof(default_boot_code));
     hdr.BS_BootEndSig = 0xaa55;
@@ -182,7 +180,6 @@ int fat16_open_file(fileinfo_t *finfo, char *filename)
         return 0;
     }
     else {
-        finfo = NULL; // 这一句实际上是没有用的
         free(root_dir);
         return -1;
     }

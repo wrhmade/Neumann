@@ -8,4 +8,5 @@ Copyright W24 Studio
 #define FAULT_H
 #include <int.h>
 void fault_process(registers_t reg);
+void print_stack_trace(void);
 #endif

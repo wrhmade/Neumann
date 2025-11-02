@@ -85,7 +85,9 @@ vfs_node_t vfs_do_search(vfs_node_t dir, const char* name);
 void vfs_free_child(vfs_node_t vfs);
 int vfs_read(vfs_node_t file, void *addr, size_t offset, size_t size);	// 读取节点数据
 int vfs_write(vfs_node_t file, void *addr, size_t offset, size_t size);	// 写入节点
+int vfs_mount_by_index(const char* src, vfs_node_t node, int index);	// 通过指定文件系统索引挂载指定设备至指定节点
 int vfs_mount(const char* src, vfs_node_t node);						// 挂载指定设备至指定节点
+int vfs_get_index_by_name(const char *name);							// 通过文件系统名称获取索引
 int vfs_umount(const char* path);										// 卸载指定设备的挂载点
 vfs_node_t get_rootdir(void);											// 获取根节点
 int vfs_init(void);

@@ -20,7 +20,7 @@ extern uint32_t WINDOW_TITLE_FCOLOR;
 extern uint32_t WINDOW_CLOSE_BUTTON_COLOR;
 extern uint32_t WINDOW_CLOSE_BUTTON_BACKCOLOR;
 
-int strhex2num(char *s)
+int strhex2num(char *s,uint32_t *num)
 {
     int result=0;
     if(strncmp(s,"0x",2)!=0)
@@ -58,7 +58,8 @@ int strhex2num(char *s)
     	}
     	result=result*16+n;
     }
-    return result;
+    *num=result;
+    return 0;
 }
 
 int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name);
@@ -66,7 +67,7 @@ int load_wallpaper(uint32_t *vram,int x,int y,char *wallpaper_name);
 int theme_set(char *themename,uint32_t *buf)
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    char wtbc[30],wtfc[30],wbbc[30],wbfc[30],wp[30];
+    char wtbc[100],wtfc[100],wbbc[100],wbfc[100],wp[100];
     if(vfs_open(themename)==NULL)
     {
         return -1;
@@ -88,30 +89,26 @@ int theme_set(char *themename,uint32_t *buf)
         return -1;
     }
     
-    int n;
-    n=strhex2num(wtbc);
-    if(n==-1)
+    uint32_t n;
+    if(strhex2num(wtbc,&n)==-1)
     {
         return -1;
     }
     WINDOW_TITLE_COLOR=n;
     
-    n=strhex2num(wtfc);
-    if(n==-1)
+    if(strhex2num(wtfc,&n)==-1)
     {
         return -1;
     }
     WINDOW_TITLE_FCOLOR=n;
     
-    n=strhex2num(wbbc);
-    if(n==-1)
+    if(strhex2num(wbbc,&n)==-1)
     {
         return -1;
     }
     WINDOW_CLOSE_BUTTON_BACKCOLOR=n;
-    
-    n=strhex2num(wbfc);
-    if(n==-1)
+
+    if(strhex2num(wbfc,&n)==-1)
     {
         return -1;
     }

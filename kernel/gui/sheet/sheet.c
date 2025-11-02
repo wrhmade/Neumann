@@ -102,7 +102,24 @@ void sheet_setbuf(sheet_t *sht, unsigned int *buf, int xs, int ys, int col_inv)
     sht->buf = buf;
     sht->bxsize = xs;
     sht->bysize = ys;
-    sht->color_inv = col_inv;
+    if(col_inv==-1)
+    {
+        sht->have_color_inv=0;
+    }
+    else
+    {
+        sht->have_color_inv=1;
+        sht->color_inv=col_inv;
+    }
+
+    for(int y=0;y<ys;y++)
+    {
+        for(int x=0;x<xs;x++)
+        {
+            buf[y*sht->bxsize+x]|=0xFF000000;
+        }
+    }
+
     return;
 }
 
@@ -159,7 +176,7 @@ void sheet_refreshmap(shtctl_t *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
             for (bx = bx0; bx < bx1; bx++)
             {
                 vx = sht->vx0 + bx;
-                if (buf[by * sht->bxsize + bx] != sht->color_inv)
+                if (sht->have_color_inv==0 || buf[by * sht->bxsize + bx] != sht->color_inv)
                 {
                     map[vy * ctl->xsize + vx] = sid;
                 }
@@ -175,6 +192,7 @@ void sheet_refreshsub(shtctl_t *ctl, int vx0, int vy0, int vx1, int vy1, int h0,
     int h, bx, by, vx, vy, bx0, by0, bx1, by1;
     unsigned int *buf, *vram = ctl->vram, *map = ctl->map, sid;
     sheet_t *sht;
+
     // refresh范围超出边界时，进行修正
     if (vx0 < 0)
     {
@@ -226,7 +244,7 @@ void sheet_refreshsub(shtctl_t *ctl, int vx0, int vy0, int vx1, int vy1, int h0,
                 vx = sht->vx0 + bx;
                 if (map[vy * ctl->xsize + vx] == sid)
                 {
-                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+                    vram[vy * ctl->xsize + vx] = alphablend(buf[by * sht->bxsize + bx],vram[vy * ctl->xsize + vx],(buf[by * sht->bxsize + bx]>>24)&0xff);
                 }
             }
         }

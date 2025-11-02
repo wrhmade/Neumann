@@ -13,10 +13,14 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <graphic.h>
 #include <fifo.h>
+#include <acpi.h>
+#include <stdio.h>
+#include <nasmfunc.h>
+#include <com.h>
 
 #pragma GCC optimize("00") //硬件处理不开优化
 
-void log(char *s);
+void wait_KBC_sendready(void);
 
 #define PORT_KEYDAT		0x0060
 #define PORT_KEYCMD		0x0064
@@ -81,6 +85,18 @@ static void in_process(uint32_t key)
                 break;
             case TAB:
                 fifo_put(&decoded_key, '\t');
+                break;
+            case UP:
+                fifo_put(&decoded_key, KEY_UP);
+                break;
+            case DOWN:
+                fifo_put(&decoded_key, KEY_DOWN);
+                break;
+            case LEFT:
+                fifo_put(&decoded_key, KEY_LEFT);
+                break;
+            case RIGHT:
+                fifo_put(&decoded_key, KEY_RIGHT);
                 break;
         }
     }
@@ -303,11 +319,11 @@ static void keyboard_read()
 
 
 
-void keyboard_handler(registers_t regs)
+void keyboard_handler(registers_t *regs)
 {
     fifo_put(&keyfifo, io_in8(KB_DATA));
     keyboard_read();
-
+    send_eoi();
 }
 
 void init_keyboard(void)

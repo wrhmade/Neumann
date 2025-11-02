@@ -24,7 +24,7 @@ uint32_t *fullscreen_buf;
 static void fullscreen_graphic_init()
 {
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    boxfill(fullscreen_buf,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0x000000);
+    boxfill(fullscreen_buf,binfo->scrnx,0,0,binfo->scrnx-1,binfo->scrny-1,0xFF000000);
 }
 
 //初始化全屏界面
@@ -33,7 +33,7 @@ void fullscreen_init()
     fullscreen_sht=sheet_alloc(global_shtctl);
     fullscreen_sht->movable=0;
     struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
-    fullscreen_buf=(uint32_t)kmalloc(sizeof(uint32_t)*binfo->scrnx*binfo->scrny);
+    fullscreen_buf=(uint32_t *)kmalloc(sizeof(uint32_t)*binfo->scrnx*binfo->scrny);
     sheet_setbuf(fullscreen_sht,fullscreen_buf,binfo->scrnx,binfo->scrny,-1);
     fullscreen_graphic_init();
     sheet_updown(fullscreen_sht,-1);

@@ -167,7 +167,7 @@ static list_t list_free(list_t list)
 {
 	while (list != 0) {
 		list_t next = list->next;
-		free(list);
+		kfree(list);
 		list = next;
 	}
 	return 0;
@@ -178,7 +178,7 @@ static list_t list_free_with(list_t list, void (*free_data)(void *))
 	while (list != 0) {
 		list_t next = list->next;
 		free_data(list->data);
-		free(list);
+		kfree(list);
 		list = next;
 	}
 	return 0;
@@ -218,7 +218,7 @@ static void *list_pop(list_t *list_p)
 	if (*list_p == list) *list_p = list->prev;
 	if (list->prev) list->prev->next = 0;
 	list_t data = list->data;
-	free(list);
+	kfree(list);
 	return data;
 }
 
@@ -274,14 +274,14 @@ static list_t list_delete(list_t list, void *data)
 	if (list->data == data) {
 		list_t temp = list;
 		list = list->next;
-		free(temp);
+		kfree(temp);
 		return list;
 	}
 	for (list_t current = list->next; current; current = current->next) {
 		if (current->data == data) {
 			current->prev->next = current->next;
 			if (current->next != 0) current->next->prev = current->prev;
-			free(current);
+			kfree(current);
 		break;
 		}
 	}
@@ -295,7 +295,7 @@ static list_t list_delete_with(list_t list, void *data, free_t callback)
 		list_t temp = list;
 		list = list->next;
 		if (callback)callback(temp->data);
-		free(temp);
+		kfree(temp);
 		return list;
 	}
 	for (list_t current = list->next; current; current = current->next) {
@@ -303,7 +303,7 @@ static list_t list_delete_with(list_t list, void *data, free_t callback)
 			current->prev->next = current->next;
 			if (current->next != 0) current->next->prev = current->prev;
 			if (callback) callback(current->data);
-			free(current);
+			kfree(current);
 			break;
 		}
 	}
@@ -316,12 +316,12 @@ static list_t list_delete_node(list_t list, list_t node)
 	if (list == node) {
 		list_t temp = list;
 		list = list->next;
-		free(temp);
+		kfree(temp);
 		return list;
 	}
 	node->prev->next = node->next;
 	if (node->next != 0) node->next->prev = node->prev;
-	free(node);
+	kfree(node);
 	return list;
 }
 
@@ -332,13 +332,13 @@ static list_t list_delete_node_with(list_t list, list_t node, free_t callback)
 		list_t temp = list;
 		list = list->next;
 		if (callback)callback(temp->data);
-		free(temp);
+		kfree(temp);
 		return list;
 	}
 	node->prev->next = node->next;
 	if (node->next != 0) node->next->prev = node->prev;
 	if (callback)callback(node->data);
-	free(node);
+	kfree(node);
 	return list;
 }
 

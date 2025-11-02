@@ -43,11 +43,9 @@ void putfont(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c,
 	return;
 }
 
-void putstr_ascii(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c, unsigned char *s)
+void putstr_ascii(uint32_t *vram, uint16_t xsize, uint16_t x, uint16_t y, uint32_t c,char *s)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     extern char asciifnt[4096];
-	char *font;
 	int i;
 	for(i=0;s[i]!=0;i++)
     {

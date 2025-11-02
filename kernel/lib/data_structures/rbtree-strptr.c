@@ -11,7 +11,7 @@ Copyright W24 Studio
 #include <mm.h>
 #include <console.h>
 #include <task.h>
-
+#include <stdio.h>
 
 uint32_t rbtree_sp_hash(const char *str)
 {

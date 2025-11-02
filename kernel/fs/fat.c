@@ -15,6 +15,7 @@ Copyright W24 Studio
 #include <task.h>
 #include <cmos.h>
 #include <stdio.h>
+#include <krnlcons.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-conversion"
@@ -88,7 +89,7 @@ int fatfs_readfile(file_t file, void *addr, size_t offset, size_t size)
 	uint32_t n;
 	res = f_read(file->handle, addr, size, &n);
 	if (res != FR_OK) return -1;
-	return 0;
+	return n;
 }
 
 int fatfs_writefile(file_t file, const void *addr, size_t offset, size_t size)
@@ -100,7 +101,9 @@ int fatfs_writefile(file_t file, const void *addr, size_t offset, size_t size)
 	uint32_t n;
 	res = f_write(file->handle, addr, size, &n);
 	if (res != FR_OK) return -1;
-	return 0;
+	res = f_sync(file->handle);
+	if (res != FR_OK) return -1;
+	return n;
 }
 
 void fatfs_open(void *parent, const char* name, vfs_node_t node)

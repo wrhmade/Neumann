@@ -10,9 +10,12 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <string.h>
 #include <com.h>
+#include <stdio.h>
 
 #define EFLAGS_AC_BIT		0x00040000
 #define CR0_CACHE_DISABLE	0x60000000
+
+extern uint32_t memtest_sub(uint32_t start, uint32_t end);
 
 uint32_t memtest(uint32_t start, uint32_t end)
 {
@@ -52,16 +55,10 @@ uint32_t free_space_total(void)
 {
 	memman_t *man=(memman_t *)MEMMAN_ADDR;
 	uint32_t i, t = 0;
-    char s[30];
 	for (i = 0; i < man->frees; i++) {
 		t += man->free[i].size;
 	}
 	return t;
-}
-
-static void memman_init(memman_t *man)
-{
-    man->frees = 0;
 }
 
 static uint32_t memman_alloc(memman_t *man, uint32_t size)
@@ -189,11 +186,6 @@ uint32_t init_mem(void)
 /*初始化内存管理*/
 {
 	uint32_t memtotal=memtest(0x00400000, 0xbfffffff);
-
-
-	memman_t *man=(memman_t *)MEMMAN_ADDR;
-	memman_init(man);
-
-	memman_free(man, 0x400000, memtotal - 0x400000);
+    //在preload那里初始化一次就不必初始化了（memman与preload的memman互通，地址一样）
 	return memtotal;
 }

@@ -13,6 +13,8 @@ Copyright W24 Studio
 #define EFLAGS_AC_BIT		0x00040000
 #define CR0_CACHE_DISABLE	0x60000000
 
+extern uint32_t memtest_sub(uint32_t start, uint32_t end);
+
 uint32_t memtest(uint32_t start, uint32_t end)
 {
 	char flg486 = 0;

@@ -9,6 +9,7 @@ Copyright W24 Studio
 #include <limits.h>
 #include <errno.h>
 #include <mm.h>
+#include <assert.h>
 
 void *memset(void *dst_, uint8_t value, uint32_t size)
 {
@@ -34,6 +35,23 @@ int memcmp(const void *a_, const void *b_, uint32_t size)
         a++, b++;
     }
     return 0;
+}
+
+void* memmove(void* dest, const void* src, size_t num) {
+    assert(dest && src);
+    void *ret = dest;
+    if (dest < src) {
+        while (num--) {
+        *(char *)dest = *(char *)src;
+        dest = (char *)dest + 1;
+        src = (char *)src + 1;
+        }
+    } else {
+        while (num--) {
+        *((char *)dest + num) = *((char *)src + num);
+        }
+    }
+    return ret;
 }
  
 char *strcpy(char *dst_, const char *src_)
@@ -204,7 +222,7 @@ long int strtol(const char *nptr, char **endptr, int base) {
 
     // 计算转换结果
     limit = negative ? LONG_MIN : LONG_MAX;
-    while (*s >= '0' && *s <= '9' ||
+    while ((*s >= '0' && *s <= '9') ||
            (*s >= 'a' && *s <= 'z') ||
            (*s >= 'A' && *s <= 'Z')) {
         int digit = *s - '0';
@@ -291,7 +309,7 @@ void *strdup(const char *s)
 	return p;
 }
 
-int streq(char *a,char *b)
+int streq(const char *a,const char *b)
 {
     return strcmp(a,b)==0;
 }

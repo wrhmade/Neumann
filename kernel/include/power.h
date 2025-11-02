@@ -8,4 +8,6 @@ Copyright W24 Studio
 #define POWER_H
 void poweroff();
 void reboot();
+
+void scheduled_poweroff(int time);
 #endif

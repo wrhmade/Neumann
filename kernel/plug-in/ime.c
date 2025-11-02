@@ -18,7 +18,7 @@ Copyright W24 Studio
 #include <stddef.h>
 #include <keyboard.h>
 #include <syscall.h>
-
+#include <stdio.h>
 
 extern int shift_pressing,ctrl_pressing;
 
@@ -35,9 +35,11 @@ static int quotation_mark=0;
 static int double_quotation_mark=0;
 
 int double_byte;//全角模式
-int choosing=0,select_start,select_index;
+int choosing=0,select_page,select_index;
+int n;
+int current_mb_id;
 
-chinese_t *py_result;
+chinese_t *chr_result;
 
 char input[7];//最多7个字符决定一个汉字
 
@@ -46,42 +48,125 @@ char chooses[5][3];//候选
 int input_index=0;
 int mb_lines;
 
+ime_mb_t ime_mbctl[IME_MB_MAX];
+int mb_num=0;
+
+int chooses_table_num;
+ime_ct_t chooses_table[400];
+
 void log(char *s);
 void log_cn(char *s);
 
+static void refresh();
+static int ime_setup_mb(int id);
+
+static void make_choose_table()
+{
+    chooses_table_num=0;
+    for(int i=0;i<400;i++)
+    {
+        for(int j=0;j<5;j++)
+        {
+            chooses_table[i].chr[j].byte1=0;
+            chooses_table[i].chr[j].byte2=0;
+        }
+        chooses_table[i].n=0;
+    }
+
+    int remaining=n;
+    int k=0;
+    int l=0;
+    while(remaining>0)
+    {
+        if(remaining>=5)
+        {
+            chooses_table[k].n=5;
+            for(int i=0;i<5;i++)
+            {
+                chooses_table[k].chr[i].byte1=chr_result[l].byte1;
+                chooses_table[k].chr[i].byte2=chr_result[l].byte2;
+                l++;
+                remaining--;
+            }
+        }
+        else
+        {
+            chooses_table[k].n=remaining;
+            int m=remaining;
+            for(int i=0;i<m;i++)
+            {
+                chooses_table[k].chr[i].byte1=chr_result[l].byte1;
+                chooses_table[k].chr[i].byte2=chr_result[l].byte2;
+                l++;
+                remaining--;
+            }
+        }
+        k++;
+    }
+    chooses_table_num=k;
+}
+
+static void ime_switch()
+{
+    int next_id=current_mb_id+1;
+    if(ime_mbctl[next_id].flag==0)
+    {
+        next_id=0;
+    }
+    for(int i=0;i<390;i++)
+    {
+        chr_result[i].byte1=0;
+        chr_result[i].byte2=0;
+    }
+    current_mb_id=next_id;
+    choosing=0;
+    input_index=0;
+    memset(input,0,sizeof(input));
+    ime_setup_mb(next_id);
+    refresh();
+}
 
 static void refresh()
 {
     task_t *task=task_now();
-    boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0x808080);
+    boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0xFF808080);
+
+    if(mb_num==0)
+    {
+        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0xFF000000,"未加载码表");
+        return;
+    }
+
     if(status->inputmode==0)
     {
-        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0x000000,"英");
+        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0xFF000000,"英");
     }
     if(status->inputmode==1)
     {
-        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0x000000,"中");
+        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0xFF000000,"中");
+        putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24+16+8,0,0xFF000000,ime_mbctl[current_mb_id].name);
     }
     task->langbyte=0;
     if(status->inputmode==1)
     {
         if(double_byte)
         {
-            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0x000000,"全");
+            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0xFF000000,"全");
         }
         else
         {
-            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0x000000,"半");
+            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24,0,0xFF000000,"半");
         }
     }
     task->langbyte=0;
-    putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24+16,0,0x000000,input);
-    if(choosing)boxfill(ime_shtbuf,ime_sheet->bxsize,24+16+input_index*8,13,24+16+input_index*8+7,15,0x000000);
+    putstr_ascii(ime_shtbuf,ime_sheet->bxsize,24+16+80,0,0xFF000000,input);
+    if(choosing)boxfill(ime_shtbuf,ime_sheet->bxsize,24+16+80+input_index*8,13,24+16+80+input_index*8+7,15,0xFF000000);
 
-    int x=8*7+16+32,i;
+    int x=8*7+16+80+32,i;
     int number=1;
     char chr[3];
 
+    make_choose_table();
 
     if(choosing)
     {
@@ -89,17 +174,17 @@ static void refresh()
         {
             chr[0]=number+'0';
             chr[1]=0;
-            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x-8,0,0xFF0000,chr);
-            chr[0]=py_result[i+select_start].byte1;
-            chr[1]=py_result[i+select_start].byte2;
+            putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x-8,0,0xFFFF0000,chr);
+            chr[0]=chooses_table[select_page].chr[i].byte1;
+            chr[1]=chooses_table[select_page].chr[i].byte2;
             chr[2]=0;
             if(select_index==i)
             {
-                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0xFF0000,chr);
+                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0xFFFF0000,chr);
             }
             else
             {
-                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0x000000,chr);
+                putstr_ascii(ime_shtbuf,ime_sheet->bxsize,x,0,0xFF000000,chr);
             }
             strcpy(chooses[i],chr);
             //log_cn(chr);
@@ -111,21 +196,20 @@ static void refresh()
     sheet_refresh(ime_sheet,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1);
 }
 
-void ime_findpy()
+void ime_findinput()
 {
     int i=0;
-    char *line,*p,*q;
-    char str[101];
+    char *p;
     for(i=0;i<390;i++)
     {
-        py_result[i].byte1=0;
-        py_result[i].byte2=0;
+        chr_result[i].byte1=0;
+        chr_result[i].byte2=0;
     }
-    char substr[40],chr[3];
+    char substr[40];
     sprintf(substr,"\n%s ",input);
     p=strstr(status->mb,substr);
     i=0;
-
+    n=0;
     
     if(p!=NULL)
     {
@@ -133,9 +217,10 @@ void ime_findpy()
         p+=1;
         while(!(*(p-1)=='\n' && i!=0))
         {
-            py_result[i].byte1=*p;
-            py_result[i].byte2=*(p+1);
+            chr_result[i].byte1=*p;
+            chr_result[i].byte2=*(p+1);
             i++;
+            n++;
             p+=3;
         }
     }
@@ -153,6 +238,7 @@ void ime_put(char *s)
 
 void ime_input(char c)
 {
+    int need_to_reset=1;
     if(c=='\n' && choosing==1)
     {
         ime_put(input);
@@ -172,40 +258,57 @@ void ime_input(char c)
     }
     else if(c=='=')
     {
-        select_start+=5;
-        select_index=0;
+        if(select_page<chooses_table_num-1)
+        {
+            select_page++;
+            select_index=0;
+        }
+        need_to_reset=0;
     }
     else if(c=='-')
     {
-        if(select_start>0)
+        if(select_page>0)
         {
-            select_start-=5;
-            select_index=0;
+            select_index=4;
+            select_page--;
         }
+        need_to_reset=0;
     }
     else if(c==']' && choosing)
     {
-        select_index++;
-        if(select_index==5)
+        
+        if(select_index==4)
         {
-            select_start+=5;
-            select_index=0;
+            if(select_page<chooses_table_num-1)
+            {
+                select_page++;
+                select_index=0;
+            }
         }
+        else
+        {
+            if(select_index<chooses_table[select_page].n-1)
+            {
+                select_index++;
+            }
+        }
+        need_to_reset=0;
     }
     else if(c=='[' && choosing)
     {
         if(select_index==0)
         {
-            if(select_start>0)
+            if(select_page>0)
             {
                 select_index=4;
-                select_start-=5;
+                select_page--;
             }
         }
         else
         {
             select_index--;
         }
+        need_to_reset=0;
     }
     else if(c==' ' && choosing)
     {
@@ -221,7 +324,7 @@ void ime_input(char c)
     }
     else if(c>=0x20 && c<=0xFF && input_index<=5)
     {
-        select_start=0;
+        select_page=0;
         if(c>='1' && c<='5')
         {
             int number=c-'0'-1;
@@ -254,7 +357,12 @@ void ime_input(char c)
     {
         choosing=0;
     }
-    ime_findpy();
+    if(need_to_reset)
+    {
+        select_index=0;
+        select_page=0;
+    }
+    ime_findinput();
     refresh();
 }
 
@@ -265,7 +373,16 @@ void ime_main()
     refresh();
     for(;;)
     {
-        if(ctrl_pressing)
+        if(mb_num==0)//一个码表都没加载
+        {
+            //收到什么就发送什么
+            if(fifo_status(&key_fifo)>0)
+            {
+                i=fifo_get(&key_fifo);
+                fifo_put(&keywin->window->task->fifo,i);
+            }
+        }
+        else if(ctrl_pressing)
         {
             if(shift_pressing)
             {
@@ -277,12 +394,12 @@ void ime_main()
                 }
                 for(i=0;i<390;i++)
                 {
-                    py_result[i].byte1=0;
-                    py_result[i].byte2=0;
+                    chr_result[i].byte1=0;
+                    chr_result[i].byte2=0;
                 }
                 choosing=0;
                 select_index=0;
-                select_start=0;
+                select_page=0;
                 input_index=0;
                 refresh();
                 continue;
@@ -325,6 +442,11 @@ void ime_main()
                     while(ctrl_pressing);
                     double_byte=!double_byte;
                     refresh();
+                }
+                else if(shift_pressing)
+                {
+                    while(shift_pressing);
+                    ime_switch();
                 }
                 else
                 {
@@ -700,32 +822,24 @@ void ime_init()
     status=(ime_status_t *)kmalloc(sizeof(ime_status_t));
     status->enabled=1;
     status->inputmode=0;
-    
 
-    vfs_node_t node=vfs_open("/resource/ime/pymb.dat");
-
-    if(node==0)
+    for(int i=0;i<IME_MB_MAX;i++)
     {
-        status->enabled=0;
-        error_message("无法加载拼音码表!","输入法错误");
-        return;
+        ime_mbctl[i].flag=0;
     }
     
-    status->mb=(char *)kmalloc(sizeof(char)*(node->size+5));
-    vfs_read(node,status->mb,0,node->size);
 
-    py_result=(chinese_t *)kmalloc(sizeof(chinese_t *)*390);
+    chr_result=(chinese_t *)kmalloc(sizeof(chinese_t *)*390);
 
 
     ime_sheet=sheet_alloc(global_shtctl);
     ime_sheet->movable=1;//标记为可拖移
-    ime_shtbuf=(uint32_t *)kmalloc(sizeof(uint32_t)*232*16);
-    sheet_setbuf(ime_sheet,ime_shtbuf,232,16,-1);
-    boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0x808080);
-
-
-
+    ime_shtbuf=(uint32_t *)kmalloc(sizeof(uint32_t)*312*16);
+    sheet_setbuf(ime_sheet,ime_shtbuf,312,16,-1);
+    boxfill(ime_shtbuf,ime_sheet->bxsize,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1,0xFF808080);
     
+    putstr_ascii(ime_shtbuf,ime_sheet->bxsize,0,0,0xFF000000,"正在初始化......");
+
     sheet_updown(ime_sheet,-1);
     
     double_byte=0;
@@ -733,10 +847,71 @@ void ime_init()
     sheet_refresh(ime_sheet,0,0,ime_sheet->bxsize-1,ime_sheet->bysize-1);
     sheet_slide(ime_sheet,binfo->scrnx-ime_sheet->bxsize,binfo->scrny-ime_sheet->bysize-100);
     sheet_updown(ime_sheet,1);
+
     fifo_init(&key_fifo,128,key_buf);
+
+    ime_load_mb("/resource/ime/pymb.dat","拼音");
+    ime_load_mb("/resource/ime/wbmb.dat","五笔");
 
     ime_task=create_kernel_task(ime_main);
     ime_task->langmode=1;
     choosing=0;
+    name_task(ime_task,"Neumann中文输入法");
     task_run(ime_task);
 }
+
+static int ime_setup_mb(int id)
+{
+    if(id<0 || id>IME_MB_MAX-1)
+    {
+        return -1;
+    }
+    if(status->mb)
+    {
+        kfree(status->mb);
+    }
+    status->mb=kmalloc(ime_mbctl[id].size);
+    memset(status->mb,0,ime_mbctl[id].size);
+    memcpy(status->mb,ime_mbctl[id].buffer,ime_mbctl[id].size);
+    current_mb_id=id;
+    return 0;
+}
+
+int ime_load_mb(const char *filename,const char *mb_name)
+{
+    int id=-1;
+    for(int i=0;i<IME_MB_MAX;i++)
+    {
+        if(ime_mbctl[i].flag==0)
+        {
+            id=i;
+            break;
+        }
+    }
+    if(id==-1)
+    {
+        return -1;
+    }
+    
+    vfs_node_t node=vfs_open(filename);
+    if(node==0)
+    {
+        char message_content[1024];
+        sprintf(message_content,"名为 %s 的码表文件(%s)无法加载",mb_name,filename);
+        error_message(message_content,"错误");
+        return -1;
+    }
+    ime_mbctl[id].buffer=(char *)kmalloc(sizeof(char)*(node->size+5));
+    vfs_read(node,ime_mbctl[id].buffer,0,node->size);
+
+    strcpy(ime_mbctl[id].name,mb_name);
+    ime_mbctl[id].size=node->size;
+    ime_mbctl[id].flag=1;
+    mb_num++;
+    if(mb_num==1)
+    {
+        ime_setup_mb(id);
+    }
+    return id;
+}
+

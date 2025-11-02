@@ -370,7 +370,7 @@ int ftcopy_from()
     free(dir_entries); // 释放临时缓冲区
     FILE *fp = fopen(dstpath, "wb"); // 打开要写入的文件
     if (!fp) { // 不存在，报错
-        printf("Error: destination path does not exist\n", dstpath);
+        printf("Error: destination path does not exist\n");
         return 1;
     }
     char *clust = (char *) malloc(512); // 单独给簇分配一个缓冲区，直接往buf里写也行

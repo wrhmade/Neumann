@@ -409,5 +409,4 @@ static struct vfs_callback callbacks = {
 void iso9660_regist(void)
 {
 	iso9660_id = vfs_regist("iso9660", &callbacks);
-	//print_succ("iso9660(CDFS) File System initialize.\n");
 }

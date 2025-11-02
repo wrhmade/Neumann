@@ -1,7 +1,7 @@
 TOOLPATH=../../../tools/
 include ../../config.txt
 
-OBJS=stdio.obj sprintf.obj string.obj malloc.obj
+OBJS=stdio.obj string.obj stdlib.obj ctype.obj time.obj
 
 %.obj:%.c
 	$(GCC) -c $*.c -o $*.obj -I../include -fno-pic

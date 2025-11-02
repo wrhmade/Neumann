@@ -9,6 +9,8 @@ Copyright W24 Studio
 #include <vdisk.h>
 #include <fifo.h>
 #include <string.h>
+#include <stdio.h>
+#include <krnlcons.h>
 
 vdisk vdisk_ctl[26];
 

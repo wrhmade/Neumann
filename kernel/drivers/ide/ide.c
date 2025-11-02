@@ -14,46 +14,10 @@ Copyright W24 Studio
 #include <int.h>
 #include <vdisk.h>
 #include <krnlcons.h>
+#include <stdio.h>
+#include <acpi.h>
 
 #pragma GCC optimize("00") //硬件处理不开优化
-
-/* 从I/O端口批量地读取数据到内存（16位） */
-static inline void insw(uint16_t port, void *buf, unsigned long n)
-{
-	__asm__ __volatile__("cld; rep; insw"
-                 : "+D"(buf),
-                 "+c"(n)
-                 : "d"(port));
-}
-
-/* 从内存批量地写入数据到I/O端口（16位） */
-static inline void outsw(uint16_t port, const void *buf, unsigned long n)
-{
-	__asm__ __volatile__("cld; rep; outsw"
-                 : "+S"(buf),
-                 "+c"(n)
-                 : "d"(port));
-}
-
-/* 从I/O端口批量地读取数据到内存（32位） */
-static inline void insl(uint32_t port, void *addr, int cnt)
-{
-	__asm__ __volatile__("cld;"
-                 "repne; insl;"
-                 : "=D" (addr), "=c" (cnt)
-                 : "d" (port), "0" (addr), "1" (cnt)
-                 : "memory", "cc");
-}
-
-/* 从内存批量地写入数据到I/O端口（32位） */
-static inline void outsl(uint32_t port, const void *addr, int cnt)
-{
-	__asm__ __volatile__("cld;"
-                 "repne; outsl;"
-                 : "=S" (addr), "=c" (cnt)
-                 : "d" (port), "0" (addr), "1" (cnt)
-                 : "memory", "cc");
-}
 
 static uint8_t atapi_packet[12] = {0xA8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static int package[2];
@@ -125,6 +89,7 @@ static void ide_wait_irq(void)
 void ide_irq()
 {
 	ide_irq_invoked = 1;
+    send_eoi();
 }
 
 /* 设置IDE */
@@ -134,8 +99,8 @@ static void ide_initialize(uint32_t BAR0, uint32_t BAR1, uint32_t BAR2, uint32_t
 	uint8_t detected[4] = {0};  // 标记每个设备是否已经被检测过
 	register_interrupt_handler(IRQ15,&ide_irq);
     register_interrupt_handler(IRQ14,&ide_irq);
-    irq_mask_clear(0xf);
-    irq_mask_clear(0xe);
+    // irq_mask_clear(0xf);
+    // irq_mask_clear(0xe);
 
 	for (int i = 0; i < 4; i++) {
 		ide_devices[i].Reserved = 0;
@@ -167,7 +132,6 @@ static void ide_initialize(uint32_t BAR0, uint32_t BAR1, uint32_t BAR2, uint32_t
 				}
 				if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) break;
 			}
-            char s[400];
 			if (err != 0) {
 				uint8_t cl = ide_read(i, ATA_REG_LBA1);
 				uint8_t ch = ide_read(i, ATA_REG_LBA2);
@@ -589,7 +553,7 @@ void get_ide_info(int secondary,int slave,ide_info_t *info)
 		info->reserved=1;
 		info->size=ide_devices[index].Size;
 		info->type=ide_devices[index].Type;
-		strcpy(info->name,ide_devices[index].Model);
+		strcpy(info->name,(char *)ide_devices[index].Model);
 	}
 	else
 	{

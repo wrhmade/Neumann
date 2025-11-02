@@ -4,3 +4,7 @@ msdemo.h
 Copyright W24 Studio 
 */
 
+#ifndef MSDEMO_H
+#define MSDEMO_H
+void start_msdemo();
+#endif

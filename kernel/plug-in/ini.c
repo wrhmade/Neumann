@@ -22,6 +22,7 @@ Key2=value2
 #include <console.h>
 #include <task.h>
 #include <syscall.h>
+#include <stdio.h>
 
 char* read_line(const char* str, int line_number)
 {
@@ -29,7 +30,7 @@ char* read_line(const char* str, int line_number)
     char *next,*current;
     char* line = NULL;
     size_t len;
-    current=str;
+    current=(char *)str;
     while(1)
     {
         next=strchr(current,'\n');

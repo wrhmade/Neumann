@@ -5,16 +5,14 @@ Copyright W24 Studio
 */
 #ifndef STDDEF_H
 #define STDDEF_H 
-#include <stdint.h>
-#define NULL ((char *)0)
+#define NULL ((void *)0)
 
 typedef __INTPTR_TYPE__  ssize_t;
 typedef __UINTPTR_TYPE__ size_t;
 typedef __INTPTR_TYPE__				intptr_t;
 typedef __UINTPTR_TYPE__			uintptr_t;
 
-typedef int8_t bool;
-typedef int16_t wchar_t;
-#define true 1
-#define false 0
+typedef char bool;
+typedef short wchar_t;
+#define SIZE_MAX 4294967295U
 #endif

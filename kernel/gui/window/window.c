@@ -13,11 +13,11 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <macro.h>
 
-uint32_t WINDOW_COLOR=0xFAFAFA;
-uint32_t WINDOW_TITLE_COLOR=0x07689F;
-uint32_t WINDOW_TITLE_FCOLOR=0xFFFFFF;
-uint32_t WINDOW_CLOSE_BUTTON_COLOR=0xFAFAFA;
-uint32_t WINDOW_CLOSE_BUTTON_BACKCOLOR=0xFF0000;
+uint32_t WINDOW_COLOR=0xFFFAFAFA;
+uint32_t WINDOW_TITLE_COLOR=0xFF07689F;
+uint32_t WINDOW_TITLE_FCOLOR=0xFFFFFFFF;
+uint32_t WINDOW_CLOSE_BUTTON_COLOR=0xFFFAFAFA;
+uint32_t WINDOW_CLOSE_BUTTON_BACKCOLOR=0xFFFF0000;
 extern shtctl_t *global_shtctl;
 
 
@@ -26,7 +26,6 @@ void window_redraw()
 {
     int i;
     sheet_t *sht;
-    window_t *win;
     for(i=global_shtctl->top-1;i>0;i--)
     {
         sht=global_shtctl->sheets[i];
@@ -39,7 +38,7 @@ void window_redraw()
 
 window_t *create_window(char *title,uint32_t xsize,uint32_t ysize,uint32_t col_inv,uint32_t close_btn)
 {
-    struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
+    //struct BOOTINFO *binfo=(struct BOOTINFO *)ADR_BOOTINFO;
     window_t *window=(window_t *)kmalloc(sizeof(window_t));
     sheet_t *sheet_window;
 	uint32_t *buf_window;
@@ -73,11 +72,11 @@ void draw_window(window_t *window,int title_only)
 {
     boxfill(window->sheet->buf,window->xsize,0,0,window->xsize-1,17,WINDOW_TITLE_COLOR);
     if(!title_only)boxfill(window->sheet->buf,window->xsize,0,18,window->xsize-1,window->ysize-1,WINDOW_COLOR);
-    boxfill(window->sheet->buf,window->xsize,0,0,0,window->ysize-1,0x000000);
-    boxfill(window->sheet->buf,window->xsize,0,0,window->xsize-1,0,0x000000);
-    boxfill(window->sheet->buf,window->xsize,window->xsize-1,0,window->xsize-1,window->ysize-1,0x000000);
-    boxfill(window->sheet->buf,window->xsize,0,window->ysize-1,window->xsize-1,window->ysize-1,0x000000);
-    boxfill(window->sheet->buf,window->xsize,0,18,window->xsize-1,18,0x000000);
+    boxfill(window->sheet->buf,window->xsize,0,0,0,window->ysize-1,0xFF000000);
+    boxfill(window->sheet->buf,window->xsize,0,0,window->xsize-1,0,0xFF000000);
+    boxfill(window->sheet->buf,window->xsize,window->xsize-1,0,window->xsize-1,window->ysize-1,0xFF000000);
+    boxfill(window->sheet->buf,window->xsize,0,window->ysize-1,window->xsize-1,window->ysize-1,0xFF000000);
+    boxfill(window->sheet->buf,window->xsize,0,18,window->xsize-1,18,0xFF000000);
     putstr_ascii(window->sheet->buf,window->xsize,1,1,WINDOW_TITLE_FCOLOR,window->title);
 
     static char btn_close_chr[16][16]={

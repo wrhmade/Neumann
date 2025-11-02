@@ -12,6 +12,9 @@ Copyright W24 Studio
 #include <binfo.h>
 #include <macro.h>
 #include <fifo.h>
+#include <stdio.h>
+#include <acpi.h>
+#include <com.h>
 
 #define PORT_KEYDAT		0x0060
 #define PORT_KEYCMD		0x0064
@@ -32,14 +35,14 @@ int mouse_data0;
 uint32_t mouse_fifobuf[1024];
 fifo_t mouse_fifo;
 
-void ps2mouse_handler(registers_t regs)
+void ps2mouse_handler(registers_t *regs)
 {
-    struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
     mouse_data0=io_in8(PORT_KEYDAT);
     char s[50];
     sprintf(s,"Mouse Input:0x%02X\n",mouse_data0);
     serial_putstr(s);
     fifo_put(&mouse_fifo,mouse_data0);
+    send_eoi();
 }
 
 void init_ps2mouse(void)

@@ -21,5 +21,6 @@ struct BOOTINFO
 	uint32_t base_count;
 	uint32_t boot_device;
 	uint32_t *vram_really;
+	uint32_t *kernel_elf_base;
 } __attribute__((packed));
 #endif

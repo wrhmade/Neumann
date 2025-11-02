@@ -37,7 +37,6 @@ Copyright W24 Studio
 #include <vdisk.h>
 #include <devfs.h>
 #include <fat.h>
-#include <hd.h>
 #include <fullscreen.h>
 #include <dbuffer.h>
 #include <ide.h>
@@ -46,6 +45,11 @@ Copyright W24 Studio
 #include <exec.h>
 #include <nullzero.h>
 #include <acpi.h>
+#include <math.h>
+#include <audio.h>
+#include <sb16.h>
+#include <wav.h>
+#include <lpt.h>
 
 extern fifo_t decoded_key;
 extern fifo_t mouse_fifo;
@@ -105,6 +109,17 @@ void print_pcinfo(console_t *console)
 	{
 		_PUTSTR(console,"False\n");
 	}
+
+	_PUTSTR(console,"\tx2APIC\t\t\t");
+	if(get_apic_mode())
+	{
+		_PUTSTR(console,"True\n");
+	}
+	else
+	{
+		_PUTSTR(console,"False\n");
+	}
+
 	_PUTSTR(console,"\tBase Count\t\t");
 	sprintf(s,"%08x\n",binfo->base_count);
 	_PUTSTR(console,s);
@@ -199,7 +214,7 @@ void taskc_main(void)
 	int mmx=-1,mmy=-1,mmx2=0,x,y;
 	int new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0,i;
 	sheet_t *sht;
-	uint8_t mouse_data,keyboard_data;
+	uint32_t mouse_data,keyboard_data;
 	for(;;)
 	{
 
@@ -358,17 +373,11 @@ void taskb_main(void)
 			case 6:strcpy(iWeek_str,"Sun. ");break;
 		}
 		sprintf(result, "%04d/%02d/%02d %s", ctime->year,ctime->month, ctime->day,iWeek_str);
-		putstr_ascii_sheet(global_sht_back,binfo->scrnx-190,binfo->scrny-20,0x000000,DESKTOP_BACKCOLOR,result);
+		putstr_ascii_sheet(global_sht_back,binfo->scrnx-198,binfo->scrny-20,0xFF000000,DESKTOP_BACKCOLOR,result);
 		sprintf(result, "%02d:%02d:%02d", hour, minute,second);
-		putstr_ascii_sheet(global_sht_back,binfo->scrnx-69,binfo->scrny-20,0x000000,DESKTOP_BACKCOLOR,result);
+		putstr_ascii_sheet(global_sht_back,binfo->scrnx-69,binfo->scrny-20,0xFF000000,DESKTOP_BACKCOLOR,result);
 
 	}
-}
-
-void log(char *s)
-{
-	krnlcons_putstr(s);
-	krnlcons_putchar('\n');
 }
 
 
@@ -395,52 +404,39 @@ void krnlc_main(void)
 	// boxfill(binfo->vram,binfo->scrnx,40,40,320,320,0x00FF00);
 	// boxfill(binfo->vram,binfo->scrnx,60,60,340,340,0x0000FF);
 	
-	log("Neumann Operating System\nVersion 0.8 [Beta 6]\nCopyright(c) 2023-2025 W24 Studio & 71GN Deep Space");
-	log("Now initializing system...");
+	klog("Neumann Operating System\nVersion 0.8 [Beta 6]\nCopyright(c) 2023-2025 W24 Studio & 71GN Deep Space");
+	klog("Now initializing system...");
 
-	log("Initializing GDT and IDT...");
+	klog("Initializing GDT and IDT...");
 	init_gdtidt();
 
-	
 
-	log("Initializing Serial Port...");
-	init_com();
+	klog("Initializing ACPI...");
+	acpi_init();
 	
-
-	log("Initializing PS/2 Keyboard...");
+	klog("Initializing PS/2 Keyboard...");
 	init_keyboard();
 
-	log("Initializing PS/2 Mouse...");
+	klog("Initializing PS/2 Mouse...");
 	init_ps2mouse();
 	
 	//for(;;);
 
-	log("Initializing Memory...");
+	klog("Initializing Memory...");
 	memtotal=init_mem();
 
 	sprintf(s,"INFO:Memory Total:%dMB",memtotal/1024/1024);
-	log(s);
-	
-	void *test_buf=kmalloc(20);
-	sprintf(s,"INFO:test_buf at %p\n",test_buf);
-	log(s);
-
+	klog(s);
 	//sprintf(s,"memtotal=%uMB",memtotal/1024/1024);
-	
-	
-	
+
 	binfo->memtotal=memtotal;
-	
 
 	//putstr_ascii(binfo->vram,binfo->scrnx,0,0,0x000000,s);
 
-	log("Initializing Double Buffer...");
+	klog("Initializing Double Buffer...");
 	init_dbuffer();
-	
-	log("Initializing ACPI...");
-	acpi_init();
 
-	log("Initializing Sheet...");
+	klog("Initializing Sheet...");
 	
 	shtctl = shtctl_init(binfo->vram, binfo->scrnx, binfo->scrny);
 	global_shtctl=shtctl;
@@ -451,17 +447,18 @@ void krnlc_main(void)
 	global_sht_back=sht_back;
 	global_buf_back=buf_back;
 
-	log("Initializing PCI...");
+	klog("Initializing PCI...");
 	pci_init();
 	sprintf(s,"INFO:PCI devices total:%d",count_pci_device());
-	log(s);
+	klog(s);
+	klog_lspci();
 
 
-	log("Initializing VDISK...");
+	klog("Initializing VDISK...");
 	vdisk_init();
 
 
-	log("Initializing FDC...");
+	klog("Initializing FDC...");
 	int fdc_version;
 	fdc_version=fdc_init();
 	if(fdc_version==-1)
@@ -475,20 +472,26 @@ void krnlc_main(void)
 	else
 	{
 		sprintf(s,"FDC Version:0x%x",fdc_version);
-		log(s);
+		klog(s);
 	}
 
-	log("Initializing IDE...");
+	klog("Initializing IDE...");
 	init_ide();
 
-	log("Initializing null & zero device...");
+	klog("Initializing null & zero device...");
 	init_nullzero();
 
-	log("Initializing VFS...");
+	klog("Initializing Serial Port...");
+	init_com();
+
+	klog("Initializing parallel Port...");
+	init_lpt();
+
+	klog("Initializing VFS...");
 	vfs_init();
 
 
-	log("Registering file system...");
+	klog("Registering file system...");
 	krnlcons_putstr_color("Device File system...",0xFFFFFF,0x000000);
 	devfs_regist();
 	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
@@ -497,36 +500,48 @@ void krnlc_main(void)
 	fatfs_regist();
 	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
 
-	// krnlcons_putstr_color("ISO9660...",0xFFFFFF,0x000000);
-	// iso9660_regist();
-	// krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
-	
-	log("\n");
+	krnlcons_putstr_color("ISO9660...",0xFFFFFF,0x000000);
+	iso9660_regist();
+	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
 
-	log("Initializing Multi Task...");
+
+	klog("Initializing Multi Task...");
 	task_t *task_a=task_init();
 
-	log("Initializing Timer...");
-	init_timer(100);
-	
-
-	log("Starting Interrupt...");
+	klog("Starting Interrupt...");
 	asm_sti();
-	
 
-	log("Initializing FPU...");
+	klog("Initializing FPU...");
 	if(!init_fpu())
 	{
-		log("Warning:FPU is not found!");
+		klog("Warning:FPU is not found!");
 	}
 
 	if(vfs_do_search(vfs_open("/dev"), "hdb"))
 	{
-		log("Mount:/dev/hdb => /");
+		klog("Mount:/dev/hdb => /");
 		vfs_mount("/dev/hdb", vfs_open("/"));
 	}
 
-	log("Loading Font...");
+	klog("Initializing File Table...");
+	init_file_table();
+
+	klog("Initializing Audio Devices...");
+	krnlcons_putstr_color("Base...",0xFFFFFF,0x000000);
+	audio_device_init();
+	krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
+
+	krnlcons_putstr_color("SB16...",0xFFFFFF,0x000000);
+	if(sb16_init()==0)
+	{
+		krnlcons_putstr_color("OK\n",0x00FF00,0x000000);
+	}
+	else
+	{
+		krnlcons_putstr_color("Error\n",0xFF0000,0x000000);
+	}
+
+	klog("Loading Font...");
 	char *value=(char *)kmalloc(sizeof(char)*10);
 	vfs_node_t node;
 	if(read_ini("/config/neumann.ini","System","load_hzk16",value)==0)
@@ -579,58 +594,26 @@ void krnlc_main(void)
 	}
 
 	kfree(value);
-		
-	
-	log("Benching CPU...");
+
+	klog("Benching CPU...");
 	uint32_t base_count=benchcpu();
 	binfo->base_count=base_count;
 	sprintf(s,"Base Count is %08x",base_count);
-	log(s);
+	klog(s);
 
-	log("System is ready.");
-	
-	
-	// vdisk_print();
-	// char *vdisk_buf=kmalloc(2048);
-	// int status=rw_vdisk(2,0,vdisk_buf,1,1);z
-	// if(status==0)
-	// {
-	// 	krnlcons_putstr("Failed.\n");
-	// }
-	// for(int i=0;i<512;i++)
-	// {
-	// 	sprintf(s,"0x%02x ",vdisk_buf[i]&0xff);
-	// 	krnlcons_putstr(s);
-	// }
-	// for(;;);
-
+	klog("System is ready.");
 	print_pcinfo(0);
 
-
-	//for(;;);
-
-
-
-	log("\n\nNow Loading Desktop...");
+	klog("\n\nNow Loading Desktop...");
 	
 	init_desktop(buf_back,binfo->scrnx,binfo->scrny);
-	
-	
-	
-	
-
-	
-	
 
 	buf_mouse=(uint32_t *)kmalloc(sizeof(uint32_t)*24*24);
 	draw_mouse(buf_mouse);
-	
 
 	sht_mouse=sheet_alloc(shtctl);
 	sheet_setbuf(sht_mouse,buf_mouse,24,24,DESKTOP_BACKCOLOR);
-	
-	
-	
+
 	mouse_x=binfo->scrnx/2;
 	mouse_y=binfo->scrny/2;
 
@@ -639,21 +622,19 @@ void krnlc_main(void)
 	sheet_slide(sht_mouse,  mouse_x,  mouse_y);
 	sheet_updown(sht_mouse,  1);
 
-	//putblock(binfo->vram,binfo->scrnx,24,24,mouse_x,mouse_y,mouse,24);
-
 	//使其能够处理鼠标与键盘
 	task_t *task_c=create_kernel_task(taskc_main);
+	name_task(task_c,"Mouse and Keyboard");
 	task_run(task_c);
 
 	ready_system();//准备系统
 
 
 	task_t *task_b=create_kernel_task(taskb_main);
+	name_task(task_b,"Desktop Time Display");
 	task_run(task_b);
 
 	ime_init();
-
-	
 
 
 	if(binfo->hzk16==0 && binfo->hzk16f==0)warn_message("Chinese character library loading failed! Some Chinese characters may become garbled.","Chinese Font Library Not Loaded");
@@ -661,7 +642,6 @@ void krnlc_main(void)
 	if(binfo->hzk16!=0 && binfo->hzk16f==0)warn_message("繁体中文字库(HZK16F.BIN)无法加载！","字库未加载");
 	
 	console=open_console();
-
 	keywin=console->window->sheet;
 
 	for(;;);//悬挂

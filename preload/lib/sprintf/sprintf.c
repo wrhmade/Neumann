@@ -6,6 +6,7 @@ Copyright W24 Studio
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 int sprintf(char *s, const char *format, ...)
 {

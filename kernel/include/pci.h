@@ -160,4 +160,7 @@ pci_device_t *pci_find_device_by_class(u32 classcode);
 void pci_enable_busmastering(pci_device_t *device);
 int count_pci_device();
 void cmd_lspci(console_t *console);
+void pci_init(void);
+
+void klog_lspci();
 #endif

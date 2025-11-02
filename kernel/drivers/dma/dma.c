@@ -8,6 +8,7 @@ Copyright W24 Studio
 
 #include <stddef.h>
 #include <nasmfunc.h>
+#include <io.h>
 
 #define LOW_BYTE(x) ((x) & 0x00ff)
 #define HIGH_BYTE(x) (((x) & 0xff00) >> 8)

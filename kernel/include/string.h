@@ -13,9 +13,11 @@ Copyright W24 Studio
 void *memset(void *dst_, uint8_t value, uint32_t size);
 void *memcpy(void *dst_, const void *src_, uint32_t size);
 int memcmp(const void *a_, const void *b_, uint32_t size);
+void* memmove(void* dest, const void* src, size_t num);
 char *strcpy(char *dst_, const char *src_);
 uint32_t strlen(const char *str);
 int8_t strcmp(const char *a, const char *b);
+int strncmp(const char *str1, const char *str2, size_t n);
 char *strchr(const char *str, const uint8_t ch);
 void bzero(void *dest, uint32_t len);
 char* strstr(const char* str1, const char* str2);
@@ -32,6 +34,6 @@ char *strupr(char *src);
 char *strlwr(char *src);
 void *strdup(const char *s);
 
-int streq(char *a,char *b);
+int streq(const char *a,const char *b);
 char *strchrnul(const char* s, int c);
 #endif
